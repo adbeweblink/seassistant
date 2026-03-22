@@ -1,0 +1,381 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { Music, Upload, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { useSoundLibrary } from '@/hooks/useSoundLibrary'
+import type { SoundFile } from '@/lib/types'
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds) return ''
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+const FORMAT_COLORS: Record<string, string> = {
+  mp3: '#22d3ee',
+  wav: '#a78bfa',
+  ogg: '#34d399',
+  flac: '#fb923c',
+  m4a: '#f472b6',
+  aac: '#facc15',
+}
+
+interface SoundItemProps {
+  sound: SoundFile
+  onDelete: (filename: string) => void
+}
+
+function SoundItem({ sound, onDelete }: SoundItemProps) {
+  const [dragging, setDragging] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const badgeColor = FORMAT_COLORS[sound.format] ?? '#94a3b8'
+
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
+    e.dataTransfer.setData('text/plain', sound.filename)
+    e.dataTransfer.effectAllowed = 'copy'
+    setDragging(true)
+  }
+
+  function handleDragEnd() {
+    setDragging(false)
+  }
+
+  function handleDeleteClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (confirmDelete) {
+      onDelete(sound.filename)
+    } else {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 2500)
+    }
+  }
+
+  return (
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 12px',
+        borderRadius: '6px',
+        cursor: 'grab',
+        background: dragging ? '#0f172a' : 'transparent',
+        opacity: dragging ? 0.5 : 1,
+        transition: 'background 0.12s, opacity 0.12s',
+        userSelect: 'none',
+      }}
+      onMouseEnter={(e) => {
+        if (!dragging) (e.currentTarget as HTMLDivElement).style.background = '#1a1a2e'
+      }}
+      onMouseLeave={(e) => {
+        if (!dragging) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+      }}
+    >
+      <Music size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: '13px',
+            color: '#e2e8f0',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+          title={sound.filename}
+        >
+          {sound.filename}
+        </div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+          <span style={{ fontSize: '11px', color: '#64748b' }}>{formatSize(sound.size)}</span>
+          {sound.duration > 0 && (
+            <span style={{ fontSize: '11px', color: '#64748b' }}>
+              {formatDuration(sound.duration)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <span
+        style={{
+          fontSize: '10px',
+          fontWeight: 600,
+          padding: '1px 5px',
+          borderRadius: '3px',
+          background: `${badgeColor}22`,
+          color: badgeColor,
+          border: `1px solid ${badgeColor}44`,
+          textTransform: 'uppercase',
+          flexShrink: 0,
+        }}
+      >
+        {sound.format}
+      </span>
+
+      <button
+        onClick={handleDeleteClick}
+        title={confirmDelete ? '再按一次確認刪除' : '刪除'}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '2px',
+          color: confirmDelete ? '#f87171' : '#475569',
+          flexShrink: 0,
+          transition: 'color 0.12s',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+        onMouseEnter={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.color = '#f87171'
+        }}
+        onMouseLeave={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.color = confirmDelete ? '#f87171' : '#475569'
+        }}
+      >
+        <Trash2 size={13} />
+      </button>
+    </div>
+  )
+}
+
+export function SoundLibrary() {
+  const { sounds, loading, error, refresh } = useSoundLibrary()
+  const [search, setSearch] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const filtered = sounds.filter((s) =>
+    s.filename.toLowerCase().includes(search.toLowerCase())
+  )
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+        await fetch('/api/sounds', { method: 'POST', body: formData })
+      }
+      await refresh()
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function handleDelete(filename: string) {
+    try {
+      await fetch(`/api/sounds/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+      await refresh()
+    } catch {
+      // 靜默失敗，下次 refresh 會重新同步
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* 搜尋 + 工具列 */}
+      <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ position: 'relative' }}>
+          <Search
+            size={13}
+            style={{
+              position: 'absolute',
+              left: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#475569',
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="搜尋音效…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: '#1a1a2e',
+              border: '1px solid #2a2a3e',
+              borderRadius: '6px',
+              padding: '5px 8px 5px 26px',
+              fontSize: '12px',
+              color: '#e2e8f0',
+              outline: 'none',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = '#22d3ee')}
+            onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = '#2a2a3e')}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              padding: '5px 8px',
+              background: 'transparent',
+              border: '1px solid #2a2a3e',
+              borderRadius: '6px',
+              color: uploading ? '#475569' : '#94a3b8',
+              fontSize: '12px',
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+            }}
+            onMouseEnter={(e) => {
+              if (!uploading) {
+                const el = e.currentTarget as HTMLButtonElement
+                el.style.background = '#1a1a2e'
+                el.style.borderColor = '#22d3ee'
+                el.style.color = '#22d3ee'
+              }
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.background = 'transparent'
+              el.style.borderColor = '#2a2a3e'
+              el.style.color = uploading ? '#475569' : '#94a3b8'
+            }}
+          >
+            <Upload size={12} />
+            {uploading ? '上傳中…' : '上傳音效'}
+          </button>
+
+          <button
+            onClick={refresh}
+            disabled={loading}
+            title="重新整理"
+            style={{
+              padding: '5px 8px',
+              background: 'transparent',
+              border: '1px solid #2a2a3e',
+              borderRadius: '6px',
+              color: '#94a3b8',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                const el = e.currentTarget as HTMLButtonElement
+                el.style.background = '#1a1a2e'
+                el.style.borderColor = '#22d3ee'
+                el.style.color = '#22d3ee'
+              }
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.background = 'transparent'
+              el.style.borderColor = '#2a2a3e'
+              el.style.color = '#94a3b8'
+            }}
+          >
+            <RefreshCw
+              size={13}
+              style={{
+                animation: loading ? 'spin 1s linear infinite' : 'none',
+              }}
+            />
+          </button>
+        </div>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="audio/*"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleUpload}
+      />
+
+      {/* 音效列表 */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          paddingBottom: '8px',
+        }}
+      >
+        {error && (
+          <div
+            style={{
+              margin: '8px 12px',
+              padding: '8px 10px',
+              background: '#7f1d1d22',
+              border: '1px solid #7f1d1d',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: '#fca5a5',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              color: '#475569',
+              fontSize: '12px',
+              lineHeight: '1.6',
+            }}
+          >
+            <Music size={24} style={{ marginBottom: '8px', opacity: 0.4 }} />
+            <div>
+              {search
+                ? `找不到「${search}」相關音效`
+                : '還沒有音效，上傳或從 YouTube 下載'}
+            </div>
+          </div>
+        )}
+
+        {filtered.map((sound) => (
+          <SoundItem key={sound.filename} sound={sound} onDelete={handleDelete} />
+        ))}
+      </div>
+
+      {/* 底部計數 */}
+      {sounds.length > 0 && (
+        <div
+          style={{
+            padding: '4px 12px 8px',
+            fontSize: '11px',
+            color: '#475569',
+            borderTop: '1px solid #1e293b',
+          }}
+        >
+          {filtered.length !== sounds.length
+            ? `${filtered.length} / ${sounds.length} 個音效`
+            : `共 ${sounds.length} 個音效`}
+        </div>
+      )}
+
+    </div>
+  )
+}
