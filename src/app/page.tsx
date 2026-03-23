@@ -484,26 +484,6 @@ export default function Home() {
           <KeyboardLayout />
         </div>
 
-        {/* Cue Log — 一般模式，較小 */}
-        {cueLog.length > 0 && (
-          <div
-            className="shrink-0 px-4 py-1.5"
-            style={{
-              backgroundColor: 'rgba(15,15,26,0.9)',
-              borderTop: '1px solid #1e1e3a',
-            }}
-          >
-            <div className="text-xs mb-1" style={{ color: '#374151', fontFamily: 'monospace' }}>
-              CUE LOG
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {recentCueLog.map((entry, i) => (
-                <CueLogRow key={i} entry={entry} compact />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* 波形編輯面板 */}
         <EditorPanel />
       </main>
