@@ -75,7 +75,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           '-x',
           '--audio-format', audioFormat,
           '--audio-quality', '0',
-          '--postprocessor-args', 'ffmpeg:-af loudnorm=I=-14:TP=-1:LRA=11',
           '-o', '%(title)s.%(ext)s',
           '--newline',
           '--progress',
