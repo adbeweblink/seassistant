@@ -5,6 +5,7 @@ import type { KeyDef } from '@/lib/keyboard-map'
 import { getKeyColor } from '@/lib/keyboard-map'
 import type { KeyBinding } from '@/lib/types'
 import { useStore } from '@/store/useStore'
+import { preloadSound, playSound, stopSound } from '@/lib/audio-engine'
 
 interface KeyCapProps {
   keyDef: KeyDef
@@ -42,6 +43,7 @@ const KeyCap = React.memo(function KeyCap({
 }: KeyCapProps) {
   const setSelectedKey = useStore((s) => s.setSelectedKey)
   const setBinding = useStore((s) => s.setBinding)
+  const removeBinding = useStore((s) => s.removeBinding)
   const isPlaying = useStore((s) => s.playingKeys.has(keyDef.code))
   const pendingSound = useStore((s) => s.pendingSound)
   const setPendingSound = useStore((s) => s.setPendingSound)
@@ -90,6 +92,7 @@ const KeyCap = React.memo(function KeyCap({
         fadeOut: 0,
       })
       setPendingSound(null)
+      preloadSound(pendingSound).catch(() => {})
     }
     setSelectedKey(keyDef.code)
   }, [keyDef.code, pendingSound, setSelectedKey, setBinding, setPendingSound])
@@ -118,9 +121,31 @@ const KeyCap = React.memo(function KeyCap({
         fadeOut: 0,
       })
       setSelectedKey(keyDef.code)
+      preloadSound(soundFile).catch(() => {})
     },
     [keyDef.code, accentColor, setBinding, setSelectedKey]
   )
+
+  // 右鍵解綁
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (!hasBound) return
+    e.preventDefault()
+    stopSound(keyDef.code)
+    removeBinding(keyDef.code)
+  }, [hasBound, keyDef.code, removeBinding])
+
+  // 雙擊預聽
+  const handleDoubleClick = useCallback(() => {
+    if (!binding?.soundFile) return
+    preloadSound(binding.soundFile).then(() => {
+      playSound(`preview_${keyDef.code}`, binding.soundFile!, {
+        startTime: binding.startTime,
+        endTime: binding.endTime,
+        volume: binding.volume,
+        fadeIn: binding.fadeIn || 0,
+      })
+    }).catch(() => {})
+  }, [binding, keyDef.code])
 
   // --- F 鍵列字體縮小 ---
   const isFKey =
@@ -135,6 +160,8 @@ const KeyCap = React.memo(function KeyCap({
       aria-label={`${keyDef.label}${hasBound ? ` — ${binding!.displayName}` : ''}`}
       aria-pressed={isSelected}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()

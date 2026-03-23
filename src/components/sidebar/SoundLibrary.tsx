@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Music, Upload, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { Music, Upload, RefreshCw, Search, Trash2, Play, Square } from 'lucide-react'
 import { useSoundLibrary } from '@/hooks/useSoundLibrary'
 import { useStore } from '@/store/useStore'
+import { preloadSound, playSound, stopSound, isKeyPlaying } from '@/lib/audio-engine'
 import type { SoundFile } from '@/lib/types'
 
 function formatSize(bytes: number): string {
@@ -87,7 +88,33 @@ function SoundItem({ sound, onDelete, isActive, onSelect }: SoundItemProps) {
         if (!dragging && !isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
       }}
     >
-      <Music size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+      {/* 預聽按鈕 */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          const previewKey = `preview_${sound.filename}`
+          if (isKeyPlaying(previewKey)) {
+            stopSound(previewKey)
+          } else {
+            preloadSound(sound.filename).then(() => {
+              playSound(previewKey, sound.filename, { volume: 0.8 })
+            }).catch(() => {})
+          }
+        }}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '2px',
+          color: '#06b6d4',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+        }}
+        title="預聽"
+      >
+        <Play size={12} />
+      </button>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div

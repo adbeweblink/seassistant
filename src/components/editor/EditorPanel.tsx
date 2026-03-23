@@ -131,7 +131,7 @@ export default function EditorPanel() {
                 </span>{' '}
                 尚未綁定音效
               </p>
-              <p className="text-xs text-slate-600">從右側音效庫拖曳音效，或點選音效後按 Enter</p>
+              <p className="text-xs text-slate-600">從左側音效庫拖曳音效到按鍵，或點選音效再點按鍵</p>
             </div>
           )}
 

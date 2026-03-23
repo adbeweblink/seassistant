@@ -6,12 +6,15 @@ import EditorPanel from '@/components/editor/EditorPanel'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { useKeyboardBinding } from '@/hooks/useKeyboardBinding'
 import { useAutoSave } from '@/hooks/useAutoSave'
-import { resumeAudioContext } from '@/lib/audio-engine'
+import { resumeAudioContext, stopAll } from '@/lib/audio-engine'
+import { useInitialLoad } from '@/hooks/useInitialLoad'
+import { StopCircle } from 'lucide-react'
 
 export default function Home() {
   // 啟用鍵盤綁定和自動儲存
   useKeyboardBinding()
   useAutoSave()
+  useInitialLoad()
 
   // 第一次互動時啟動 AudioContext
   useEffect(() => {
@@ -55,6 +58,25 @@ export default function Home() {
               音效鍵盤
             </span>
           </div>
+          <button
+            onClick={() => stopAll()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all border"
+            style={{
+              background: 'transparent',
+              borderColor: '#7f1d1d',
+              color: '#f87171',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d33'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+            }}
+            title="停止所有播放（Panic）"
+          >
+            <StopCircle size={14} />
+            全部停止
+          </button>
         </header>
 
         {/* 鍵盤區域 */}
