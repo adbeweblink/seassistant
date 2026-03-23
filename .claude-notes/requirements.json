@@ -17,6 +17,6 @@
     "flow_check": false,
     "ui_check": false
   },
-  "lastPrompt": "音效資料匣可以都預設在桌面嗎  然後如果要路改路徑 不要讓我放路徑 可以可以讓我開啟檔案總管視窗選擇資料夾",
-  "lastUpdate": "2026-03-23T15:25:29.429Z"
+  "lastPrompt": "請問上傳音效的預設路徑可以是seassistant資料夾裡面的upload資料夾嗎",
+  "lastUpdate": "2026-03-23T15:34:12.728Z"
 }

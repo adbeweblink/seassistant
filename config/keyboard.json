@@ -2,41 +2,12 @@
   "version": 2,
   "name": "e2e-test",
   "banks": {
-    "A": {
-      "Digit1": {
-        "keyCode": "Digit1",
-        "soundFile": "B'z ⧸ Raging River (ELEVEN LIVE) 【ギター】.mp3",
-        "displayName": "B'z ⧸ Raging River (ELEVEN LIVE) 【ギター】",
-        "startTime": 0,
-        "endTime": null,
-        "volume": 1,
-        "loop": false,
-        "color": "#ec4899",
-        "playMode": "oneshot",
-        "fadeIn": 0,
-        "fadeOut": 0,
-        "exclusiveGroup": null
-      },
-      "Digit2": {
-        "keyCode": "Digit2",
-        "soundFile": "B'z ⧸ Raging River (ELEVEN LIVE) 【ギター】.mp3",
-        "displayName": "B'z ⧸ Raging River (ELEVEN LIVE) 【ギター】",
-        "startTime": 0,
-        "endTime": null,
-        "volume": 1,
-        "loop": false,
-        "color": "#ec4899",
-        "playMode": "oneshot",
-        "fadeIn": 0,
-        "fadeOut": 0,
-        "exclusiveGroup": null
-      }
-    },
+    "A": {},
     "B": {},
     "C": {},
     "D": {}
   },
   "activeBank": "A",
-  "createdAt": "2026-03-23T15:26:50.765Z",
-  "updatedAt": "2026-03-23T15:26:50.772Z"
+  "createdAt": "2026-03-23T15:32:51.404Z",
+  "updatedAt": "2026-03-23T15:32:51.410Z"
 }

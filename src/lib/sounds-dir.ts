@@ -22,7 +22,7 @@ export function getSoundsDir(): string {
     console.warn('[sounds-dir] settings.json 解析失敗', e)
   }
 
-  const defaultDir = path.join(os.homedir(), 'Desktop', 'SEAssistant Sounds')
+  const defaultDir = path.join(process.cwd(), 'uploads')
   _cachedDir = path.resolve(process.env.SOUNDS_DIR || defaultDir)
   return _cachedDir
 }
