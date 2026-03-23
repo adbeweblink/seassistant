@@ -193,12 +193,15 @@ export function stopSoundWithFade(keyCode: string, fadeOutMs: number = 0): void 
     node.gain.gain.cancelScheduledValues(now)
     node.gain.gain.setValueAtTime(node.gain.gain.value, now)
     node.gain.gain.linearRampToValueAtTime(0, now + fadeOutMs / 1000)
-    // 淡出結束後真正停止
-    setTimeout(() => {
-      try { node.source.stop() } catch { /* 已停 */ }
-      node.gain.disconnect()
-      activeNodes.delete(keyCode)
-    }, fadeOutMs)
+    // 用 AudioContext 排程停止，不用 setTimeout（防競爭條件）
+    // source.stop() 會觸發 onended，由 onended 統一清理 activeNodes
+    try {
+      node.source.stop(now + fadeOutMs / 1000)
+    } catch {
+      // 已停止
+    }
+    // 立即從 activeNodes 移除，防止新 playSound 的節點被覆蓋
+    activeNodes.delete(keyCode)
   } else {
     stopSoundImmediate(keyCode)
   }
