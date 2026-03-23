@@ -213,18 +213,6 @@ function stopSoundImmediate(keyCode: string): void {
   }
 }
 
-/** 停止同 exclusive group 的其他音效 */
-export function stopExclusiveGroup(group: number, exceptKeyCode: string): string[] {
-  const stopped: string[] = []
-  activeNodes.forEach((_, key) => {
-    if (key !== exceptKeyCode) {
-      // caller 負責判斷 group 是否匹配
-      stopped.push(key)
-    }
-  })
-  return stopped
-}
-
 /** 取得播放進度 0-1，不在播放時回 null */
 export function getPlaybackProgress(keyCode: string): number | null {
   const node = activeNodes.get(keyCode)

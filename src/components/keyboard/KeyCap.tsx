@@ -171,7 +171,7 @@ const KeyCap = React.memo(function KeyCap({
       setSelectedKey(keyDef.code)
       preloadSound(soundFile).catch(() => {})
     },
-    [keyDef.code, accentColor, setBinding, setSelectedKey]
+    [keyDef.code, setBinding, setSelectedKey]
   )
 
   // 右鍵解綁

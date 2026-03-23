@@ -15,9 +15,9 @@ export function ConfigPanel() {
     setSoundsDir,
     exportConfig,
     loadConfig,
-    bindings,
     removeBinding,
   } = useStore()
+  const bindings = useStore((s) => s.banks[s.activeBank] ?? {})
   const setIsEditing = useStore((s) => s.setIsEditing)
 
   const [editingFolder, setEditingFolder] = useState(false)
@@ -331,7 +331,7 @@ export function ConfigPanel() {
           color: '#475569',
         }}
       >
-        已綁定：{Object.values(bindings).filter((b) => b.soundFile).length} 個按鍵
+        已綁定：{Object.values(bindings).filter((b: { soundFile?: string | null }) => b.soundFile).length} 個按鍵
       </div>
     </div>
   )

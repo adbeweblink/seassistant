@@ -24,7 +24,7 @@ const WaveformEditor = dynamic(() => import('./WaveformEditor'), {
 
 export default function EditorPanel() {
   const selectedKey = useStore((s) => s.selectedKey)
-  const bindings = useStore((s) => s.bindings)
+  const bindings = useStore((s) => s.banks[s.activeBank] ?? {})
   const setBinding = useStore((s) => s.setBinding)
   const [isOpen, setIsOpen] = useState(true)
   const [duration, setDuration] = useState(0)

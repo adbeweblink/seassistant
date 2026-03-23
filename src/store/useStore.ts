@@ -20,8 +20,7 @@ interface SEAssistantState {
   renameBank: (oldName: string, newName: string) => void
   duplicateBank: (source: string, newName: string) => void
 
-  // 當前 bank 的 bindings（便捷存取）
-  bindings: BankBindings
+  // 當前 bank 的 bindings
   setBinding: (keyCode: string, updates: Partial<KeyBinding>) => void
   removeBinding: (keyCode: string) => void
 
@@ -109,11 +108,6 @@ function defaultBinding(keyCode: string): KeyBinding {
 export const useStore = create<SEAssistantState>((set, get) => ({
   banks: { [DEFAULT_BANK]: {} },
   activeBank: DEFAULT_BANK,
-
-  get bindings() {
-    const state = get()
-    return state.banks[state.activeBank] ?? {}
-  },
 
   setActiveBank: (bank) =>
     set((state) => {

@@ -15,7 +15,7 @@ function isSystemCombo(e: KeyboardEvent): boolean {
 }
 
 export function useKeyboardBinding() {
-  const bindings = useStore((s) => s.bindings)
+  const bindings = useStore((s) => s.banks[s.activeBank] ?? {})
   const banks = useStore((s) => s.banks)
   const activeBank = useStore((s) => s.activeBank)
   const isEditing = useStore((s) => s.isEditing)
@@ -101,7 +101,7 @@ export function useKeyboardBinding() {
       const binding = bindingsRef.current[code]
       if (!binding) return
 
-      const mode = binding.playMode || 'hold'
+      const mode = binding.playMode || 'oneshot'
 
       if (mode === 'hold' && !binding.loop) {
         stopSoundWithFade(code, binding.fadeOut || 0)

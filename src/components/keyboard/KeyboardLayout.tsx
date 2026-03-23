@@ -17,7 +17,7 @@ const MAX_ROW_UNITS = Math.max(
 )
 
 export default function KeyboardLayout() {
-  const bindings = useStore((s) => s.bindings)
+  const bindings = useStore((s) => s.banks[s.activeBank] ?? {})
   const selectedKey = useStore((s) => s.selectedKey)
   const performanceMode = useStore((s) => s.performanceMode)
   const [guideDismissed, setGuideDismissed] = useState(false)
@@ -35,8 +35,8 @@ export default function KeyboardLayout() {
       const padding = 48 // 左右 padding 24*2
       const totalGaps = (MAX_ROW_UNITS) * KEY_GAP // 按鍵間距
       const available = el.clientWidth - padding - totalGaps
-      const unit = Math.max(32, Math.min(72, available / MAX_ROW_UNITS))
-      setUnitWidth(unit)
+      const unit = Math.round(Math.max(32, Math.min(72, available / MAX_ROW_UNITS)))
+      setUnitWidth((prev) => prev === unit ? prev : unit)
     }
 
     calc()
