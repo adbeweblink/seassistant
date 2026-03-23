@@ -57,11 +57,12 @@ export function setLimiterEnabled(on: boolean): void {
   limiterEnabled = on
   // 重新連接：bypass limiter 時直接 gain → analyser → dest
   masterGain.disconnect()
+  limiterNode.disconnect()
+  analyserNode.disconnect()
   if (on) {
     masterGain.connect(limiterNode)
     limiterNode.connect(analyserNode)
   } else {
-    limiterNode.disconnect()
     masterGain.connect(analyserNode)
   }
   analyserNode.connect(audioContext!.destination)
