@@ -15,6 +15,10 @@ interface SEAssistantState {
   isEditing: boolean
   setIsEditing: (editing: boolean) => void
 
+  // 待綁定音效（點擊音效 → 點擊按鍵 → 綁定）
+  pendingSound: string | null
+  setPendingSound: (filename: string | null) => void
+
   // 播放狀態
   playingKeys: Set<string>
   addPlayingKey: (key: string) => void
@@ -68,6 +72,9 @@ export const useStore = create<SEAssistantState>((set, get) => ({
   setSelectedKey: (key) => set({ selectedKey: key }),
   isEditing: false,
   setIsEditing: (editing) => set({ isEditing: editing }),
+
+  pendingSound: null,
+  setPendingSound: (filename) => set({ pendingSound: filename }),
 
   playingKeys: new Set(),
   addPlayingKey: (key) =>

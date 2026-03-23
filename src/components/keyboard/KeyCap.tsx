@@ -2,6 +2,7 @@
 
 import React, { useCallback } from 'react'
 import type { KeyDef } from '@/lib/keyboard-map'
+import { getKeyColor } from '@/lib/keyboard-map'
 import type { KeyBinding } from '@/lib/types'
 import { useStore } from '@/store/useStore'
 
@@ -42,8 +43,11 @@ const KeyCap = React.memo(function KeyCap({
   const setSelectedKey = useStore((s) => s.setSelectedKey)
   const setBinding = useStore((s) => s.setBinding)
   const isPlaying = useStore((s) => s.playingKeys.has(keyDef.code))
+  const pendingSound = useStore((s) => s.pendingSound)
+  const setPendingSound = useStore((s) => s.setPendingSound)
 
   const hasBound = Boolean(binding?.soundFile)
+  const hasPending = Boolean(pendingSound)
   const width = (keyDef.width ?? 1) * BASE_WIDTH + ((keyDef.width ?? 1) - 1) * GAP
 
   // --- 顏色計算 ---
@@ -56,6 +60,8 @@ const KeyCap = React.memo(function KeyCap({
     : '#1e1e30'
   const borderColor = isSelected
     ? '#06b6d4'
+    : hasPending && !hasBound
+    ? '#facc15'
     : hasBound
     ? hexToRgba(accentColor, 0.5)
     : '#252540'
@@ -68,8 +74,22 @@ const KeyCap = React.memo(function KeyCap({
 
   // --- 事件 ---
   const handleClick = useCallback(() => {
+    if (pendingSound) {
+      // 有待綁定音效 → 直接綁到這個按鍵
+      setBinding(keyDef.code, {
+        keyCode: keyDef.code,
+        soundFile: pendingSound,
+        displayName: pendingSound.replace(/\.[^.]+$/, ''),
+        startTime: 0,
+        endTime: null,
+        volume: 1,
+        loop: false,
+        color: getKeyColor(Math.random() * 10 | 0),
+      })
+      setPendingSound(null)
+    }
     setSelectedKey(keyDef.code)
-  }, [keyDef.code, setSelectedKey])
+  }, [keyDef.code, pendingSound, setSelectedKey, setBinding, setPendingSound])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()

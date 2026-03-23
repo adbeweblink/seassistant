@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { Music, Upload, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { useSoundLibrary } from '@/hooks/useSoundLibrary'
+import { useStore } from '@/store/useStore'
 import type { SoundFile } from '@/lib/types'
 
 function formatSize(bytes: number): string {
@@ -30,9 +31,11 @@ const FORMAT_COLORS: Record<string, string> = {
 interface SoundItemProps {
   sound: SoundFile
   onDelete: (filename: string) => void
+  isActive: boolean
+  onSelect: (filename: string) => void
 }
 
-function SoundItem({ sound, onDelete }: SoundItemProps) {
+function SoundItem({ sound, onDelete, isActive, onSelect }: SoundItemProps) {
   const [dragging, setDragging] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -63,6 +66,7 @@ function SoundItem({ sound, onDelete }: SoundItemProps) {
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={() => onSelect(sound.filename)}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -70,16 +74,17 @@ function SoundItem({ sound, onDelete }: SoundItemProps) {
         padding: '8px 12px',
         borderRadius: '6px',
         cursor: 'grab',
-        background: dragging ? '#0f172a' : 'transparent',
+        background: isActive ? '#1e293b' : dragging ? '#0f172a' : 'transparent',
         opacity: dragging ? 0.5 : 1,
         transition: 'background 0.12s, opacity 0.12s',
         userSelect: 'none',
+        borderLeft: isActive ? '3px solid #facc15' : '3px solid transparent',
       }}
       onMouseEnter={(e) => {
-        if (!dragging) (e.currentTarget as HTMLDivElement).style.background = '#1a1a2e'
+        if (!dragging && !isActive) (e.currentTarget as HTMLDivElement).style.background = '#1a1a2e'
       }}
       onMouseLeave={(e) => {
-        if (!dragging) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+        if (!dragging && !isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
       }}
     >
       <Music size={14} style={{ color: '#64748b', flexShrink: 0 }} />
@@ -152,9 +157,15 @@ function SoundItem({ sound, onDelete }: SoundItemProps) {
 
 export function SoundLibrary() {
   const { sounds, loading, error, refresh } = useSoundLibrary()
+  const pendingSound = useStore((s) => s.pendingSound)
+  const setPendingSound = useStore((s) => s.setPendingSound)
   const [search, setSearch] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleSelectSound(filename: string) {
+    setPendingSound(pendingSound === filename ? null : filename)
+  }
 
   const filtered = sounds.filter((s) =>
     s.filename.toLowerCase().includes(search.toLowerCase())
@@ -356,9 +367,45 @@ export function SoundLibrary() {
         )}
 
         {filtered.map((sound) => (
-          <SoundItem key={sound.filename} sound={sound} onDelete={handleDelete} />
+          <SoundItem
+            key={sound.filename}
+            sound={sound}
+            onDelete={handleDelete}
+            isActive={pendingSound === sound.filename}
+            onSelect={handleSelectSound}
+          />
         ))}
       </div>
+
+      {/* 待綁定提示 */}
+      {pendingSound && (
+        <div
+          style={{
+            padding: '8px 12px',
+            background: '#facc1515',
+            borderTop: '1px solid #facc1540',
+            fontSize: '12px',
+            color: '#facc15',
+            textAlign: 'center',
+          }}
+        >
+          🎯 點擊鍵盤上的按鍵來綁定「{pendingSound.replace(/\.[^.]+$/, '')}」
+          <button
+            onClick={() => setPendingSound(null)}
+            style={{
+              marginLeft: '8px',
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontSize: '11px',
+              textDecoration: 'underline',
+            }}
+          >
+            取消
+          </button>
+        </div>
+      )}
 
       {/* 底部計數 */}
       {sounds.length > 0 && (
