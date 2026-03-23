@@ -26,7 +26,7 @@
         "volume": 1,
         "loop": false,
         "color": "#ec4899",
-        "playMode": "oneshot",
+        "playMode": "toggle",
         "fadeIn": 0,
         "fadeOut": 0,
         "exclusiveGroup": null
@@ -37,6 +37,6 @@
     "D": {}
   },
   "activeBank": "A",
-  "createdAt": "2026-03-23T13:39:41.754Z",
-  "updatedAt": "2026-03-23T13:39:41.761Z"
+  "createdAt": "2026-03-23T13:42:08.669Z",
+  "updatedAt": "2026-03-23T13:42:08.677Z"
 }

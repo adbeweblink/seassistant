@@ -182,8 +182,14 @@ function SoundItem({ sound, onDelete, isActive, onSelect }: SoundItemProps) {
   )
 }
 
-export function SoundLibrary() {
-  const { sounds, loading, error, refresh } = useSoundLibrary()
+interface SoundLibraryProps {
+  sounds: SoundFile[]
+  loading: boolean
+  error: string | null
+  refresh: () => Promise<void>
+}
+
+export function SoundLibrary({ sounds, loading, error, refresh }: SoundLibraryProps) {
   const pendingSound = useStore((s) => s.pendingSound)
   const setPendingSound = useStore((s) => s.setPendingSound)
   const setIsEditing = useStore((s) => s.setIsEditing)

@@ -51,8 +51,8 @@ export function Sidebar() {
   const startX = useRef(0)
   const startWidth = useRef(DEFAULT_WIDTH)
 
-  // 使用音效庫 hook，供 YouTube 下載完成後觸發 refresh
-  const { refresh: refreshSounds } = useSoundLibrary()
+  // 單一 useSoundLibrary 實例，傳給 SoundLibrary 和 YouTubeDownloader
+  const { sounds, loading: soundsLoading, error: soundsError, refresh: refreshSounds } = useSoundLibrary()
 
   function toggleSection(id: SectionId) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -236,7 +236,7 @@ export function Sidebar() {
                     : {}),
                 }}
               >
-                {section.id === 'sounds' && <SoundLibrary />}
+                {section.id === 'sounds' && <SoundLibrary sounds={sounds} loading={soundsLoading} error={soundsError} refresh={refreshSounds} />}
                 {section.id === 'youtube' && (
                   <YouTubeDownloader onDownloadComplete={refreshSounds} />
                 )}
