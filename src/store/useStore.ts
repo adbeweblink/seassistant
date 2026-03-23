@@ -23,6 +23,7 @@ interface SEAssistantState {
   // 當前 bank 的 bindings
   setBinding: (keyCode: string, updates: Partial<KeyBinding>) => void
   removeBinding: (keyCode: string) => void
+  removeBindingsBySound: (filename: string) => void
 
   // UI 狀態
   selectedKey: string | null
@@ -179,6 +180,29 @@ export const useStore = create<SEAssistantState>((set, get) => ({
       return {
         undoStack: [{ ...state.banks }, ...state.undoStack].slice(0, 20),
         banks: { ...state.banks, [bankName]: bank },
+        isDirty: true,
+      }
+    }),
+
+  removeBindingsBySound: (filename) =>
+    set((state) => {
+      const newBanks = { ...state.banks }
+      let changed = false
+      for (const bankName of Object.keys(newBanks)) {
+        const bank = newBanks[bankName]
+        const newBank = { ...bank }
+        for (const [keyCode, binding] of Object.entries(newBank)) {
+          if (binding.soundFile === filename) {
+            delete newBank[keyCode]
+            changed = true
+          }
+        }
+        if (changed) newBanks[bankName] = newBank
+      }
+      if (!changed) return {}
+      return {
+        undoStack: [{ ...state.banks }, ...state.undoStack].slice(0, 20),
+        banks: newBanks,
         isDirty: true,
       }
     }),

@@ -223,9 +223,7 @@ export function SoundLibrary({ sounds, loading, error, refresh }: SoundLibraryPr
     }
   }
 
-  const banks = useStore((s) => s.banks)
-  const activeBank = useStore((s) => s.activeBank)
-  const removeBinding = useStore((s) => s.removeBinding)
+  const removeBindingsBySound = useStore((s) => s.removeBindingsBySound)
 
   async function handleDelete(filename: string) {
     try {
@@ -234,13 +232,8 @@ export function SoundLibrary({ sounds, loading, error, refresh }: SoundLibraryPr
         alert('刪除失敗')
         return
       }
-      // 清理所有綁定到此音效的按鍵
-      const bank = banks[activeBank] ?? {}
-      for (const [keyCode, binding] of Object.entries(bank)) {
-        if (binding.soundFile === filename) {
-          removeBinding(keyCode)
-        }
-      }
+      // 清理所有 Bank 中綁定到此音效的按鍵
+      removeBindingsBySound(filename)
       await refresh()
     } catch {
       alert('刪除失敗，請重試')

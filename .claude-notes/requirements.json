@@ -16,5 +16,7 @@
     "architecture": false,
     "flow_check": false,
     "ui_check": false
-  }
+  },
+  "lastPrompt": "無法連上這個網站\nlocalhost 拒絕連線。\n建議做法：\n\n檢查連線狀態\n檢查 Proxy 和防火牆\nERR_CONNECTION_REFUSED",
+  "lastUpdate": "2026-03-23T13:49:15.079Z"
 }
