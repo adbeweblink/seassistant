@@ -64,8 +64,8 @@ export function useKeyboardBinding() {
       if (mode === 'toggle') {
         if (isKeyPlaying(code)) {
           stopSoundWithFade(code, binding.fadeOut || 0)
-          removePlayingKeyRef.current(code)
-          addCueLogRef.current({ keyCode: code, soundFile: binding.soundFile!, action: 'stop' })
+          useStore.getState().removePlayingKey(code)
+          useStore.getState().addCueLog({ keyCode: code, soundFile: binding.soundFile!, action: 'stop' })
           return
         }
       }
@@ -76,7 +76,7 @@ export function useKeyboardBinding() {
         for (const [otherCode, otherBinding] of Object.entries(currentBank)) {
           if (otherCode !== code && otherBinding.exclusiveGroup === binding.exclusiveGroup && isKeyPlaying(otherCode)) {
             stopSoundWithFade(otherCode, otherBinding.fadeOut || 0)
-            removePlayingKeyRef.current(otherCode)
+            useStore.getState().removePlayingKey(otherCode)
           }
         }
       }
@@ -87,11 +87,11 @@ export function useKeyboardBinding() {
         volume: binding.volume,
         loop: binding.loop,
         fadeIn: binding.fadeIn || 0,
-        onEnded: () => removePlayingKeyRef.current(code),
+        onEnded: () => useStore.getState().removePlayingKey(code),
       })
 
-      addPlayingKeyRef.current(code)
-      addCueLogRef.current({ keyCode: code, soundFile: binding.soundFile!, action: 'play' })
+      useStore.getState().addPlayingKey(code)
+      useStore.getState().addCueLog({ keyCode: code, soundFile: binding.soundFile!, action: 'play' })
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -106,7 +106,7 @@ export function useKeyboardBinding() {
       // hold 模式：放開就停（不管是否 loop）
       if (mode === 'hold') {
         stopSoundWithFade(code, binding.fadeOut || 0)
-        removePlayingKeyRef.current(code)
+        useStore.getState().removePlayingKey(code)
       }
     }
 
