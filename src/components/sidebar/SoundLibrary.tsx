@@ -186,6 +186,7 @@ export function SoundLibrary() {
   const { sounds, loading, error, refresh } = useSoundLibrary()
   const pendingSound = useStore((s) => s.pendingSound)
   const setPendingSound = useStore((s) => s.setPendingSound)
+  const setIsEditing = useStore((s) => s.setIsEditing)
   const [search, setSearch] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -258,8 +259,8 @@ export function SoundLibrary() {
               outline: 'none',
               transition: 'border-color 0.15s',
             }}
-            onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = '#22d3ee')}
-            onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = '#2a2a3e')}
+            onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = '#22d3ee'; setIsEditing(true) }}
+            onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = '#2a2a3e'; setIsEditing(false) }}
           />
         </div>
 

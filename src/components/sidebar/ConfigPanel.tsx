@@ -17,6 +17,7 @@ export function ConfigPanel() {
     bindings,
     removeBinding,
   } = useStore()
+  const setIsEditing = useStore((s) => s.setIsEditing)
 
   const [editingFolder, setEditingFolder] = useState(false)
   const [folderInput, setFolderInput] = useState(soundsDir)
@@ -126,8 +127,8 @@ export function ConfigPanel() {
             outline: 'none',
             transition: 'border-color 0.15s',
           }}
-          onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = '#22d3ee')}
-          onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = '#2a2a3e')}
+          onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = '#22d3ee'; setIsEditing(true) }}
+          onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = '#2a2a3e'; setIsEditing(false) }}
         />
       </div>
 
@@ -157,6 +158,8 @@ export function ConfigPanel() {
                 if (e.key === 'Escape') setEditingFolder(false)
               }}
               autoFocus
+              onFocus={() => setIsEditing(true)}
+              onBlur={() => setIsEditing(false)}
               style={{
                 flex: 1,
                 background: '#1a1a2e',

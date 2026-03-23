@@ -1,20 +1,27 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import KeyboardLayout from '@/components/keyboard/KeyboardLayout'
 import EditorPanel from '@/components/editor/EditorPanel'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { useKeyboardBinding } from '@/hooks/useKeyboardBinding'
 import { useAutoSave } from '@/hooks/useAutoSave'
-import { resumeAudioContext, stopAll } from '@/lib/audio-engine'
+import { resumeAudioContext, stopAll, setMasterVolume } from '@/lib/audio-engine'
 import { useInitialLoad } from '@/hooks/useInitialLoad'
-import { StopCircle } from 'lucide-react'
+import { StopCircle, Zap, X } from 'lucide-react'
+import { useStore } from '@/store/useStore'
+import type { CueLogEntry } from '@/store/useStore'
 
 export default function Home() {
-  // 啟用鍵盤綁定和自動儲存
   useKeyboardBinding()
   useAutoSave()
   useInitialLoad()
+
+  const performanceMode = useStore((s) => s.performanceMode)
+  const setPerformanceMode = useStore((s) => s.setPerformanceMode)
+  const masterVolume = useStore((s) => s.masterVolume)
+  const setMasterVolumeStore = useStore((s) => s.setMasterVolume)
+  const cueLog = useStore((s) => s.cueLog)
 
   // 第一次互動時啟動 AudioContext
   useEffect(() => {
@@ -31,6 +38,128 @@ export default function Home() {
     }
   }, [])
 
+  // Escape 退出演出模式
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && performanceMode) {
+        setPerformanceMode(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [performanceMode, setPerformanceMode])
+
+  const handleMasterVolume = useCallback(
+    (vol: number) => {
+      setMasterVolumeStore(vol)
+      setMasterVolume(vol)
+    },
+    [setMasterVolumeStore]
+  )
+
+  const volPct = Math.round(masterVolume * 100)
+
+  // 顯示最近 8 筆
+  const recentCueLog: CueLogEntry[] = cueLog.slice(0, 8)
+
+  /* ── 演出模式 ── */
+  if (performanceMode) {
+    return (
+      <div
+        className="flex flex-col h-screen overflow-hidden"
+        style={{ backgroundColor: '#000' }}
+      >
+        {/* 縮小版 header */}
+        <header
+          className="flex items-center justify-between px-4 py-1.5 shrink-0"
+          style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}
+        >
+          {/* logo */}
+          <span className="text-sm font-bold tracking-wider" style={{ color: '#06b6d4' }}>
+            SEAssistant
+          </span>
+
+          {/* 右側控制 */}
+          <div className="flex items-center gap-3">
+            {/* 主音量 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#6b7280', fontFamily: 'monospace', minWidth: '2.5rem', textAlign: 'right' }}>
+                {volPct}%
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={masterVolume}
+                onChange={(e) => handleMasterVolume(Number(e.target.value))}
+                style={{ width: 120, accentColor: '#9ca3af', cursor: 'pointer' }}
+                title="主音量"
+              />
+            </div>
+
+            {/* 全部停止 */}
+            <button
+              onClick={() => stopAll()}
+              className="flex items-center gap-1.5 px-3 py-1 rounded text-xs transition-all border"
+              style={{ background: 'transparent', borderColor: '#7f1d1d', color: '#f87171' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d33' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              title="停止所有播放（Panic）"
+            >
+              <StopCircle size={13} />
+              全部停止
+            </button>
+
+            {/* 退出演出 */}
+            <button
+              onClick={() => setPerformanceMode(false)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded text-xs transition-all border"
+              style={{ background: 'transparent', borderColor: '#dc2626', color: '#f87171' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d55' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              title="退出演出模式（Escape）"
+            >
+              <X size={13} />
+              退出演出
+            </button>
+          </div>
+        </header>
+
+        {/* 鍵盤區域：撐滿剩餘空間 */}
+        <div className="flex items-center justify-center flex-1 overflow-hidden p-4" style={{ minHeight: 0 }}>
+          <KeyboardLayout />
+        </div>
+
+        {/* Cue Log — 演出模式，最近 8 筆，半透明覆蓋在底部 */}
+        <div
+          className="shrink-0 px-4 py-2"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            borderTop: '1px solid #1a1a1a',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div className="text-xs mb-1" style={{ color: '#4b5563', fontFamily: 'monospace' }}>
+            CUE LOG
+          </div>
+          {recentCueLog.length === 0 ? (
+            <div className="text-xs" style={{ color: '#374151', fontFamily: 'monospace' }}>
+              — 尚無 cue
+            </div>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {recentCueLog.map((entry, i) => (
+                <CueLogRow key={i} entry={entry} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  /* ── 一般模式 ── */
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* 左側邊欄 */}
@@ -58,25 +187,52 @@ export default function Home() {
               音效鍵盤
             </span>
           </div>
-          <button
-            onClick={() => stopAll()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all border"
-            style={{
-              background: 'transparent',
-              borderColor: '#7f1d1d',
-              color: '#f87171',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d33'
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-            }}
-            title="停止所有播放（Panic）"
-          >
-            <StopCircle size={14} />
-            全部停止
-          </button>
+
+          {/* 右側控制 */}
+          <div className="flex items-center gap-3">
+            {/* 主音量推桿 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#6b7280', fontFamily: 'monospace', minWidth: '2.5rem', textAlign: 'right' }}>
+                {volPct}%
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={masterVolume}
+                onChange={(e) => handleMasterVolume(Number(e.target.value))}
+                style={{ width: 120, accentColor: '#9ca3af', cursor: 'pointer' }}
+                title="主音量"
+              />
+            </div>
+
+            {/* 全部停止 */}
+            <button
+              onClick={() => stopAll()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all border"
+              style={{ background: 'transparent', borderColor: '#7f1d1d', color: '#f87171' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d33' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              title="停止所有播放（Panic）"
+            >
+              <StopCircle size={14} />
+              全部停止
+            </button>
+
+            {/* 演出模式按鈕 */}
+            <button
+              onClick={() => setPerformanceMode(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all border"
+              style={{ background: 'transparent', borderColor: '#16a34a', color: '#22c55e' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#16a34a33' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              title="進入演出模式"
+            >
+              <Zap size={14} />
+              演出模式
+            </button>
+          </div>
         </header>
 
         {/* 鍵盤區域 */}
@@ -84,9 +240,60 @@ export default function Home() {
           <KeyboardLayout />
         </div>
 
+        {/* Cue Log — 一般模式，較小 */}
+        {cueLog.length > 0 && (
+          <div
+            className="shrink-0 px-4 py-1.5"
+            style={{
+              backgroundColor: 'rgba(15,15,26,0.9)',
+              borderTop: '1px solid #1e1e3a',
+            }}
+          >
+            <div className="text-xs mb-1" style={{ color: '#374151', fontFamily: 'monospace' }}>
+              CUE LOG
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {recentCueLog.map((entry, i) => (
+                <CueLogRow key={i} entry={entry} compact />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 波形編輯面板 */}
         <EditorPanel />
       </main>
+    </div>
+  )
+}
+
+/* ── Cue Log 行元件 ── */
+function CueLogRow({ entry, compact = false }: { entry: CueLogEntry; compact?: boolean }) {
+  const actionIcon = entry.action === 'play' ? '▶' : '■'
+  const actionColor = entry.action === 'play' ? '#22c55e' : '#f87171'
+  const fontSize = compact ? '10px' : '11px'
+
+  return (
+    <div
+      className="flex items-center gap-3"
+      style={{ fontFamily: 'monospace', fontSize, color: '#6b7280', lineHeight: 1.4 }}
+    >
+      <span style={{ color: '#374151', minWidth: compact ? '5rem' : '5.5rem' }}>{entry.time}</span>
+      <span
+        style={{
+          color: '#9ca3af',
+          minWidth: '2rem',
+          background: 'rgba(156,163,175,0.08)',
+          padding: '0 4px',
+          borderRadius: 2,
+        }}
+      >
+        {entry.keyCode}
+      </span>
+      <span style={{ color: '#6b7280', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {entry.soundFile}
+      </span>
+      <span style={{ color: actionColor, minWidth: '1rem', textAlign: 'center' }}>{actionIcon}</span>
     </div>
   )
 }

@@ -20,17 +20,24 @@ export function useKeyboardBinding() {
   const isEditing = useStore((s) => s.isEditing)
   const addPlayingKey = useStore((s) => s.addPlayingKey)
   const removePlayingKey = useStore((s) => s.removePlayingKey)
+  const addCueLog = useStore((s) => s.addCueLog)
+  const performanceMode = useStore((s) => s.performanceMode)
 
   const pressedKeys = useRef<Set<string>>(new Set())
   const bindingsRef = useRef(bindings)
   const isEditingRef = useRef(isEditing)
+  const addCueLogRef = useRef(addCueLog)
+  const performanceModeRef = useRef(performanceMode)
 
   useEffect(() => { bindingsRef.current = bindings }, [bindings])
   useEffect(() => { isEditingRef.current = isEditing }, [isEditing])
+  useEffect(() => { addCueLogRef.current = addCueLog }, [addCueLog])
+  useEffect(() => { performanceModeRef.current = performanceMode }, [performanceMode])
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      if (isEditingRef.current) return
+      // 演出模式下永遠接收鍵盤，否則 isEditing 時忽略
+      if (!performanceModeRef.current && isEditingRef.current) return
       if (isSystemCombo(e)) return
       if (PASS_THROUGH_KEYS.has(e.key)) return
 
@@ -49,10 +56,10 @@ export function useKeyboardBinding() {
       const mode = binding.playMode || 'hold'
 
       if (mode === 'toggle') {
-        // Toggle 模式：正在播放就停，沒在播就播
         if (isKeyPlaying(code)) {
           stopSoundWithFade(code, binding.fadeOut || 0)
           removePlayingKey(code)
+          addCueLogRef.current({ keyCode: code, soundFile: binding.soundFile!, action: 'stop' })
           return
         }
       }
@@ -69,6 +76,7 @@ export function useKeyboardBinding() {
       })
 
       addPlayingKey(code)
+      addCueLogRef.current({ keyCode: code, soundFile: binding.soundFile!, action: 'play' })
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {

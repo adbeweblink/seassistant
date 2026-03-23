@@ -13,10 +13,6 @@ interface KeyCapProps {
   isSelected: boolean
 }
 
-/** 基準寬度（px），對應 width=1 的按鍵 */
-const BASE_WIDTH = 48
-/** 按鍵高度（px） */
-const KEY_HEIGHT = 48
 /** 間距（px） */
 const GAP = 4
 
@@ -47,6 +43,11 @@ const KeyCap = React.memo(function KeyCap({
   const isPlaying = useStore((s) => s.playingKeys.has(keyDef.code))
   const pendingSound = useStore((s) => s.pendingSound)
   const setPendingSound = useStore((s) => s.setPendingSound)
+  const performanceMode = useStore((s) => s.performanceMode)
+
+  /** 演出模式下放大按鍵 */
+  const BASE_WIDTH = performanceMode ? 64 : 48
+  const KEY_HEIGHT = performanceMode ? 64 : 48
 
   const hasBound = Boolean(binding?.soundFile)
   const hasPending = Boolean(pendingSound)
@@ -54,22 +55,33 @@ const KeyCap = React.memo(function KeyCap({
 
   // --- 顏色計算 ---
   const accentColor = binding?.color || '#06b6d4'
-  const bgColor = hasBound
-    ? hexToRgba(accentColor, isPlaying ? 0.55 : 0.2)
+  const bgColor = isPlaying
+    ? hasBound
+      ? hexToRgba(accentColor, 0.7)
+      : 'rgba(34,197,94,0.2)'
+    : hasBound
+    ? hexToRgba(accentColor, 0.2)
     : '#1a1a2a'
-  const topGradientColor = hasBound
-    ? hexToRgba(accentColor, isPlaying ? 0.7 : 0.3)
+  const topGradientColor = isPlaying
+    ? hasBound
+      ? hexToRgba(accentColor, 0.8)
+      : 'rgba(34,197,94,0.35)'
+    : hasBound
+    ? hexToRgba(accentColor, 0.3)
     : '#1e1e30'
-  const borderColor = isSelected
+  const borderColor = isPlaying
+    ? '#22c55e'
+    : isSelected
     ? '#06b6d4'
     : hasPending && !hasBound
     ? '#facc15'
     : hasBound
     ? hexToRgba(accentColor, 0.5)
     : '#252540'
+  const borderWidth = isPlaying ? 3 : isSelected ? 2 : 1
 
   const boxShadow = isPlaying
-    ? `0 0 12px 3px ${hexToRgba(accentColor, 0.6)}, inset 0 1px 0 ${hexToRgba(accentColor, 0.2)}`
+    ? '0 0 16px 4px rgba(34, 197, 94, 0.6), inset 0 1px 0 rgba(34, 197, 94, 0.2)'
     : isSelected
     ? '0 0 0 0 transparent, inset 0 1px 0 rgba(255,255,255,0.06)'
     : 'inset 0 1px 0 rgba(255,255,255,0.04)'
@@ -178,7 +190,7 @@ const KeyCap = React.memo(function KeyCap({
         flexShrink: 0,
         // 外觀
         borderRadius: '8px',
-        border: `${isSelected ? 2 : 1}px solid ${borderColor}`,
+        border: `${borderWidth}px solid ${borderColor}`,
         background: `linear-gradient(180deg, ${topGradientColor} 0%, ${bgColor} 100%)`,
         boxShadow,
         // 文字
@@ -197,7 +209,9 @@ const KeyCap = React.memo(function KeyCap({
       {/* 按鍵標籤 */}
       <span
         style={{
-          fontSize: isSmallLabel ? '0.6rem' : '0.65rem',
+          fontSize: isSmallLabel
+            ? (performanceMode ? '0.75rem' : '0.6rem')
+            : (performanceMode ? '0.85rem' : '0.65rem'),
           fontWeight: 600,
           letterSpacing: '0.03em',
           color: hasBound ? '#e2e8f0' : '#3a3a5a',
@@ -216,7 +230,7 @@ const KeyCap = React.memo(function KeyCap({
       {hasBound && binding?.soundFile && (
         <span
           style={{
-            fontSize: '0.5rem',
+            fontSize: performanceMode ? '0.65rem' : '0.5rem',
             color: hexToRgba(accentColor, 0.85),
             lineHeight: 1,
             maxWidth: '90%',

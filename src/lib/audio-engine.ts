@@ -1,6 +1,7 @@
 /** Web Audio API 引擎 — 單例模式，低延遲播放 */
 
 let audioContext: AudioContext | null = null
+let masterGain: GainNode | null = null
 
 const bufferCache = new Map<string, AudioBuffer>()
 const inflightLoads = new Map<string, Promise<AudioBuffer>>()
@@ -9,8 +10,24 @@ const activeNodes = new Map<string, { source: AudioBufferSourceNode; gain: GainN
 export function getAudioContext(): AudioContext {
   if (!audioContext) {
     audioContext = new AudioContext({ latencyHint: 'interactive' })
+    masterGain = audioContext.createGain()
+    masterGain.connect(audioContext.destination)
   }
   return audioContext
+}
+
+/** 取得 master output node（所有音效都接到這裡） */
+function getMasterOutput(): AudioNode {
+  getAudioContext()
+  return masterGain!
+}
+
+/** 設定主音量 */
+export function setMasterVolume(vol: number): void {
+  const ctx = getAudioContext()
+  if (masterGain) {
+    masterGain.gain.setValueAtTime(vol, ctx.currentTime)
+  }
 }
 
 export async function resumeAudioContext(): Promise<void> {
@@ -90,7 +107,7 @@ export function playSound(
     gainNode.gain.value = targetVolume
   }
 
-  source.connect(gainNode).connect(ctx.destination)
+  source.connect(gainNode).connect(getMasterOutput())
   source.loop = options.loop ?? false
 
   const start = options.startTime ?? 0

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { Youtube, Download, Loader2 } from 'lucide-react'
 import type { DownloadProgress } from '@/lib/types'
+import { useStore } from '@/store/useStore'
 
 const STATUS_LABELS: Record<DownloadProgress['status'], string> = {
   downloading: '下載中',
@@ -16,6 +17,7 @@ interface YouTubeDownloaderProps {
 }
 
 export function YouTubeDownloader({ onDownloadComplete }: YouTubeDownloaderProps) {
+  const setIsEditing = useStore((s) => s.setIsEditing)
   const [url, setUrl] = useState('')
   const [format, setFormat] = useState<'mp3' | 'wav'>('mp3')
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
@@ -138,8 +140,8 @@ export function YouTubeDownloader({ onDownloadComplete }: YouTubeDownloaderProps
             transition: 'border-color 0.15s',
             opacity: isDownloading ? 0.6 : 1,
           }}
-          onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = '#22d3ee')}
-          onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = '#2a2a3e')}
+          onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = '#22d3ee'; setIsEditing(true) }}
+          onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = '#2a2a3e'; setIsEditing(false) }}
         />
       </div>
 
@@ -149,6 +151,8 @@ export function YouTubeDownloader({ onDownloadComplete }: YouTubeDownloaderProps
           value={format}
           onChange={(e) => setFormat(e.target.value as 'mp3' | 'wav')}
           disabled={isDownloading}
+          onFocus={() => setIsEditing(true)}
+          onBlur={() => setIsEditing(false)}
           style={{
             background: '#1a1a2e',
             border: '1px solid #2a2a3e',

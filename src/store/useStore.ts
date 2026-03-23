@@ -3,6 +3,13 @@
 import { create } from 'zustand'
 import type { KeyBinding, KeyboardConfig } from '@/lib/types'
 
+export interface CueLogEntry {
+  time: string
+  keyCode: string
+  soundFile: string
+  action: 'play' | 'stop'
+}
+
 interface SEAssistantState {
   // 按鍵綁定
   bindings: Record<string, KeyBinding>
@@ -15,7 +22,7 @@ interface SEAssistantState {
   isEditing: boolean
   setIsEditing: (editing: boolean) => void
 
-  // 待綁定音效（點擊音效 → 點擊按鍵 → 綁定）
+  // 待綁定音效
   pendingSound: string | null
   setPendingSound: (filename: string | null) => void
 
@@ -23,6 +30,19 @@ interface SEAssistantState {
   playingKeys: Set<string>
   addPlayingKey: (key: string) => void
   removePlayingKey: (key: string) => void
+
+  // 演出模式
+  performanceMode: boolean
+  setPerformanceMode: (on: boolean) => void
+
+  // 主音量 0-1
+  masterVolume: number
+  setMasterVolume: (vol: number) => void
+
+  // Cue Log
+  cueLog: CueLogEntry[]
+  addCueLog: (entry: Omit<CueLogEntry, 'time'>) => void
+  clearCueLog: () => void
 
   // 音效資料夾
   soundsDir: string
@@ -92,6 +112,22 @@ export const useStore = create<SEAssistantState>((set, get) => ({
       next.delete(key)
       return { playingKeys: next }
     }),
+
+  performanceMode: false,
+  setPerformanceMode: (on) => set({ performanceMode: on, isEditing: false, selectedKey: null, pendingSound: null }),
+
+  masterVolume: 1,
+  setMasterVolume: (vol) => set({ masterVolume: vol }),
+
+  cueLog: [],
+  addCueLog: (entry) =>
+    set((state) => {
+      const now = new Date()
+      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+      const next = [{ ...entry, time }, ...state.cueLog].slice(0, 50)
+      return { cueLog: next }
+    }),
+  clearCueLog: () => set({ cueLog: [] }),
 
   soundsDir: './sounds',
   setSoundsDir: (dir) => set({ soundsDir: dir }),
