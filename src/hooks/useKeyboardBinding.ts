@@ -103,7 +103,8 @@ export function useKeyboardBinding() {
 
       const mode = binding.playMode || 'oneshot'
 
-      if (mode === 'hold' && !binding.loop) {
+      // hold 模式：放開就停（不管是否 loop）
+      if (mode === 'hold') {
         stopSoundWithFade(code, binding.fadeOut || 0)
         removePlayingKeyRef.current(code)
       }

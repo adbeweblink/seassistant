@@ -86,6 +86,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       let lastFilename: string | null = null
       let hasError = false
 
+      // 120 秒超時保護
+      const timeout = setTimeout(() => {
+        if (!hasError) {
+          hasError = true
+          send({ status: 'error', percent: 0, error: '下載逾時（超過 2 分鐘）' })
+          try { ytdlp.kill() } catch {}
+          controller.close()
+        }
+      }, 120_000)
+
       ytdlp.stdout.on('data', (chunk: Buffer) => {
         const text = chunk.toString('utf-8')
         for (const line of text.split('\n')) {
@@ -126,8 +136,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       })
 
       ytdlp.on('close', (code) => {
+        clearTimeout(timeout)
         if (hasError) {
-          controller.close()
+          try { controller.close() } catch {}
           return
         }
 

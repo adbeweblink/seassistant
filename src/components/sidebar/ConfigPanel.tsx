@@ -314,7 +314,7 @@ export function ConfigPanel() {
 
         <ActionButton
           icon={<Trash2 size={13} />}
-          label={confirmClear ? '再按一次確認清除' : '全部清除 Bindings'}
+          label={confirmClear ? '再按一次確認清除' : '清除此 Bank 所有綁定'}
           onClick={handleClearAll}
           fullWidth
           danger={confirmClear}

@@ -76,6 +76,7 @@ export function YouTubeDownloader({ onDownloadComplete }: YouTubeDownloaderProps
 
             if (event.status === 'done') {
               onDownloadComplete?.()
+              setUrl('')
             }
           } catch {
             // JSON 解析失敗忽略

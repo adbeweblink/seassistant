@@ -25,6 +25,14 @@ export default function Home() {
   const cueLog = useStore((s) => s.cueLog)
   const undo = useStore((s) => s.undo)
   const isDirty = useStore((s) => s.isDirty)
+  const playingKeys = useStore((s) => s.playingKeys)
+  const removePlayingKey = useStore((s) => s.removePlayingKey)
+
+  // Panic: 停止所有音效 + 清 UI 狀態
+  const handlePanic = useCallback(() => {
+    stopAll()
+    playingKeys.forEach((code) => removePlayingKey(code))
+  }, [playingKeys, removePlayingKey])
 
   // Banks
   const banks = useStore((s) => s.banks)
@@ -317,7 +325,7 @@ export default function Home() {
 
             {/* 全部停止 */}
             <button
-              onClick={() => stopAll()}
+              onClick={handlePanic}
               className="flex items-center gap-1.5 px-3 py-1 rounded text-xs transition-all border"
               style={{ background: 'transparent', borderColor: '#7f1d1d', color: '#f87171' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d33' }}
@@ -433,7 +441,7 @@ export default function Home() {
 
             {/* 全部停止 */}
             <button
-              onClick={() => stopAll()}
+              onClick={handlePanic}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all border"
               style={{ background: 'transparent', borderColor: '#7f1d1d', color: '#f87171' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7f1d1d33' }}
