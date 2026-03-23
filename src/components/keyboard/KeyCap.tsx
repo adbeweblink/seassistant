@@ -11,6 +11,7 @@ interface KeyCapProps {
   keyDef: KeyDef
   binding: KeyBinding | undefined
   isSelected: boolean
+  unitWidth?: number
 }
 
 /** 間距（px） */
@@ -36,6 +37,7 @@ const KeyCap = React.memo(function KeyCap({
   keyDef,
   binding,
   isSelected,
+  unitWidth: unitWidthProp,
 }: KeyCapProps) {
   const setSelectedKey = useStore((s) => s.setSelectedKey)
   const setBinding = useStore((s) => s.setBinding)
@@ -47,6 +49,7 @@ const KeyCap = React.memo(function KeyCap({
 
   // 拖曳高亮狀態
   const [isDragOver, setIsDragOver] = useState(false)
+  const [dragFilename, setDragFilename] = useState<string | null>(null)
 
   // 播放進度狀態
   const [progress, setProgress] = useState(0)
@@ -66,9 +69,8 @@ const KeyCap = React.memo(function KeyCap({
     return () => cancelAnimationFrame(raf)
   }, [isPlaying, keyDef.code])
 
-  /** 演出模式下放大按鍵 */
-  const BASE_WIDTH = performanceMode ? 64 : 48
-  const KEY_HEIGHT = performanceMode ? 64 : 48
+  const BASE_WIDTH = unitWidthProp ?? (performanceMode ? 64 : 48)
+  const KEY_HEIGHT = BASE_WIDTH
 
   const hasBound = Boolean(binding?.soundFile)
   const hasPending = Boolean(pendingSound)
@@ -133,17 +135,24 @@ const KeyCap = React.memo(function KeyCap({
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
-    setIsDragOver(true)
-  }, [])
+    if (!isDragOver) {
+      setIsDragOver(true)
+      // 嘗試取得拖曳的檔名（某些瀏覽器 dragover 時無法讀 getData）
+      const fn = e.dataTransfer.types.includes('text/plain') ? 'sound' : null
+      setDragFilename(fn)
+    }
+  }, [isDragOver])
 
   const handleDragLeave = useCallback(() => {
     setIsDragOver(false)
+    setDragFilename(null)
   }, [])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       setIsDragOver(false)
+      setDragFilename(null)
       const soundFile = e.dataTransfer.getData('text/plain')
       if (!soundFile) return
       setBinding(keyDef.code, {
@@ -186,6 +195,20 @@ const KeyCap = React.memo(function KeyCap({
     }).catch(() => {})
   }, [binding, keyDef.code])
 
+  // --- hover tooltip ---
+  const [isHover, setIsHover] = useState(false)
+  const tooltipText = hasBound && binding
+    ? [
+        binding.soundFile,
+        binding.playMode === 'hold' ? '按住播放' : binding.playMode === 'toggle' ? '切換播放' : '單次播放',
+        `音量 ${Math.round(binding.volume * 100)}%`,
+        binding.loop ? '循環' : '',
+        binding.fadeIn ? `淡入 ${(binding.fadeIn / 1000).toFixed(1)}s` : '',
+        binding.fadeOut ? `淡出 ${(binding.fadeOut / 1000).toFixed(1)}s` : '',
+        binding.exclusiveGroup ? `互斥群組 ${binding.exclusiveGroup}` : '',
+      ].filter(Boolean).join(' · ')
+    : ''
+
   // --- F 鍵列字體縮小 ---
   const isFKey =
     keyDef.code.startsWith('F') && /^F\d{1,2}$/.test(keyDef.code)
@@ -210,6 +233,8 @@ const KeyCap = React.memo(function KeyCap({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
       className={isPlaying ? (hasBound ? 'key-playing-colored' : 'key-playing') : ''}
       style={{
         // 佈局
@@ -218,11 +243,11 @@ const KeyCap = React.memo(function KeyCap({
         flexShrink: 0,
         // 外觀
         borderRadius: '8px',
-        border: isDragOver ? '2px dashed #06b6d4' : `${borderWidth}px solid ${borderColor}`,
+        border: isDragOver ? '2px solid #06b6d4' : `${borderWidth}px solid ${borderColor}`,
         background: isDragOver
-          ? `linear-gradient(180deg, rgba(6,182,212,0.15) 0%, rgba(6,182,212,0.1) 100%)`
+          ? `linear-gradient(180deg, rgba(6,182,212,0.3) 0%, rgba(6,182,212,0.15) 100%)`
           : `linear-gradient(180deg, ${topGradientColor} 0%, ${bgColor} 100%)`,
-        boxShadow,
+        boxShadow: isDragOver ? '0 0 12px 2px rgba(6,182,212,0.4), inset 0 0 8px rgba(6,182,212,0.15)' : boxShadow,
         // 文字
         display: 'flex',
         flexDirection: 'column',
@@ -318,6 +343,43 @@ const KeyCap = React.memo(function KeyCap({
             pointerEvents: 'none',
           }}
         />
+      )}
+
+      {/* 拖曳中的 + 圖示 */}
+      {isDragOver && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.2rem', color: '#06b6d4', fontWeight: 700,
+          pointerEvents: 'none',
+        }}>
+          +
+        </div>
+      )}
+
+      {/* Hover tooltip */}
+      {isHover && hasBound && tooltipText && !isDragOver && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginBottom: '6px',
+          padding: '4px 8px',
+          background: '#0a0a0f',
+          border: '1px solid #1e1e3a',
+          borderRadius: '6px',
+          fontSize: '10px',
+          color: '#94a3b8',
+          whiteSpace: 'nowrap',
+          zIndex: 50,
+          pointerEvents: 'none',
+          maxWidth: '250px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {tooltipText}
+        </div>
       )}
     </div>
   )

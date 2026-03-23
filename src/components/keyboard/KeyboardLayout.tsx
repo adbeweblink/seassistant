@@ -1,34 +1,64 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { KEYBOARD_ROWS } from '@/lib/keyboard-map'
 import { useStore } from '@/store/useStore'
 import KeyCap from './KeyCap'
 
-/** 行間距（px）— F 鍵列後方的額外間距 */
 const ROW_GAP = 6
 const F_ROW_EXTRA_GAP = 10
-/** 按鍵間距（px） */
 const KEY_GAP = 4
+
+// 計算最寬那行的 total width units
+const MAX_ROW_UNITS = Math.max(
+  ...KEYBOARD_ROWS.map((row) =>
+    row.reduce((sum, k) => sum + (k.width ?? 1), 0)
+  )
+)
 
 export default function KeyboardLayout() {
   const bindings = useStore((s) => s.bindings)
   const selectedKey = useStore((s) => s.selectedKey)
+  const performanceMode = useStore((s) => s.performanceMode)
   const [guideDismissed, setGuideDismissed] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [unitWidth, setUnitWidth] = useState(48)
 
   const showGuide = Object.keys(bindings).length === 0 && !guideDismissed
 
+  // 自適應寬度計算
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const calc = () => {
+      const padding = 48 // 左右 padding 24*2
+      const totalGaps = (MAX_ROW_UNITS) * KEY_GAP // 按鍵間距
+      const available = el.clientWidth - padding - totalGaps
+      const unit = Math.max(32, Math.min(72, available / MAX_ROW_UNITS))
+      setUnitWidth(unit)
+    }
+
+    calc()
+    const observer = new ResizeObserver(calc)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // 演出模式下最小 unit 提高
+  const effectiveUnit = performanceMode ? Math.max(unitWidth, 56) : unitWidth
+
   return (
     <div
-      className="inline-flex flex-col items-start select-none"
+      ref={containerRef}
+      className="flex flex-col items-start select-none w-full"
       style={{
         gap: `${ROW_GAP}px`,
         padding: '20px 24px',
         backgroundColor: '#0e0e1c',
         borderRadius: '14px',
         border: '1px solid #1a1a30',
-        boxShadow:
-          '0 4px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)',
+        boxShadow: '0 4px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)',
         position: 'relative',
       }}
     >
@@ -82,7 +112,6 @@ export default function KeyboardLayout() {
                 fontSize: '0.8rem',
                 cursor: 'pointer',
                 fontWeight: 600,
-                letterSpacing: '0.03em',
               }}
             >
               知道了
@@ -90,13 +119,13 @@ export default function KeyboardLayout() {
           </div>
         </div>
       )}
+
       {/* 鍵盤列 */}
       {KEYBOARD_ROWS.map((row, rowIndex) => {
         const isFRow = rowIndex === 0
 
         return (
           <React.Fragment key={rowIndex}>
-            {/* F 鍵列後方的額外間距 */}
             {isFRow && (
               <div style={{ height: `${F_ROW_EXTRA_GAP}px`, width: '100%' }} />
             )}
@@ -111,6 +140,7 @@ export default function KeyboardLayout() {
                   keyDef={keyDef}
                   binding={bindings[keyDef.code]}
                   isSelected={selectedKey === keyDef.code}
+                  unitWidth={effectiveUnit}
                 />
               ))}
             </div>

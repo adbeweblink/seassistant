@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "name": "e2e-test",
+  "banks": {
+    "A": {
+      "Digit1": {
+        "keyCode": "Digit1",
+        "soundFile": "B'z 今夜月の見える丘に 幻のTVバージョンギターソロ.mp3",
+        "displayName": "B'z 今夜月の見える丘に 幻のTVバージョンギターソロ",
+        "startTime": 0,
+        "endTime": null,
+        "volume": 1,
+        "loop": false,
+        "color": "#8b5cf6",
+        "playMode": "oneshot",
+        "fadeIn": 0,
+        "fadeOut": 0,
+        "exclusiveGroup": null
+      },
+      "Digit2": {
+        "keyCode": "Digit2",
+        "soundFile": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster).mp3",
+        "displayName": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+        "startTime": 0,
+        "endTime": null,
+        "volume": 1,
+        "loop": false,
+        "color": "#eab308",
+        "playMode": "oneshot",
+        "fadeIn": 0,
+        "fadeOut": 0,
+        "exclusiveGroup": null
+      }
+    },
+    "B": {}
+  },
+  "activeBank": "A",
+  "createdAt": "2026-03-23T09:08:26.646Z",
+  "updatedAt": "2026-03-23T09:08:26.652Z"
+}
