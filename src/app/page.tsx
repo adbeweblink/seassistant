@@ -6,7 +6,7 @@ import EditorPanel from '@/components/editor/EditorPanel'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { useKeyboardBinding } from '@/hooks/useKeyboardBinding'
 import { useAutoSave } from '@/hooks/useAutoSave'
-import { resumeAudioContext, stopAll, setMasterVolume } from '@/lib/audio-engine'
+import { resumeAudioContext, stopAll, setMasterVolume, getVULevel, setLimiterEnabled } from '@/lib/audio-engine'
 import { useInitialLoad } from '@/hooks/useInitialLoad'
 import { StopCircle, Zap, X, HelpCircle } from 'lucide-react'
 import { useStore } from '@/store/useStore'
@@ -24,6 +24,34 @@ export default function Home() {
   const setMasterVolumeStore = useStore((s) => s.setMasterVolume)
   const cueLog = useStore((s) => s.cueLog)
   const undo = useStore((s) => s.undo)
+  const isDirty = useStore((s) => s.isDirty)
+
+  // Banks
+  const banks = useStore((s) => s.banks)
+  const activeBank = useStore((s) => s.activeBank)
+  const setActiveBank = useStore((s) => s.setActiveBank)
+  const addBank = useStore((s) => s.addBank)
+
+  // Limiter
+  const limiterEnabled = useStore((s) => s.limiterEnabled)
+  const setLimiterEnabledStore = useStore((s) => s.setLimiterEnabled)
+
+  // Copy/Paste
+  const copyBinding = useStore((s) => s.copyBinding)
+  const pasteBinding = useStore((s) => s.pasteBinding)
+  const selectedKey = useStore((s) => s.selectedKey)
+
+  // VU Meter
+  const [vuLevel, setVuLevel] = useState(0)
+  useEffect(() => {
+    let raf: number
+    const tick = () => {
+      setVuLevel(getVULevel())
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   // 演出模式時鐘
   const [clock, setClock] = useState('')
@@ -66,17 +94,47 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [performanceMode, setPerformanceMode])
 
-  // Ctrl+Z Undo
+  // beforeunload
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) { e.preventDefault() }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  // Ctrl+Z / Ctrl+C / Ctrl+V + Ctrl+1~9 切換 bank
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault()
-        undo()
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z') {
+          e.preventDefault()
+          undo()
+        } else if (e.key === 'c') {
+          if (selectedKey) {
+            e.preventDefault()
+            copyBinding(selectedKey)
+          }
+        } else if (e.key === 'v') {
+          if (selectedKey) {
+            e.preventDefault()
+            pasteBinding(selectedKey)
+          }
+        }
+      }
+      // Ctrl+1~9 切換 bank
+      if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '9') {
+        const idx = parseInt(e.key) - 1
+        const bankKeys = Object.keys(banks)
+        if (bankKeys[idx]) {
+          e.preventDefault()
+          setActiveBank(bankKeys[idx])
+        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [undo])
+  }, [undo, selectedKey, copyBinding, pasteBinding, banks, setActiveBank])
 
   const handleMasterVolume = useCallback(
     (vol: number) => {
@@ -86,10 +144,133 @@ export default function Home() {
     [setMasterVolumeStore]
   )
 
+  const handleLimiterToggle = useCallback(() => {
+    const next = !limiterEnabled
+    setLimiterEnabledStore(next)
+    setLimiterEnabled(next)
+  }, [limiterEnabled, setLimiterEnabledStore])
+
+  const handleAddBank = useCallback(() => {
+    const existingKeys = Object.keys(banks)
+    // 找下一個可用字母 A~Z
+    let nextName = 'A'
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i)
+      if (!existingKeys.includes(letter)) {
+        nextName = letter
+        break
+      }
+    }
+    addBank(nextName)
+  }, [banks, addBank])
+
   const volPct = Math.round(masterVolume * 100)
 
   // 顯示最近 8 筆
   const recentCueLog: CueLogEntry[] = cueLog.slice(0, 8)
+
+  // ── Bank Tab 列 ──
+  const BankTabBar = () => (
+    <div
+      className="flex items-center gap-1 px-4 py-1 shrink-0"
+      style={{ backgroundColor: '#0a0a14', borderBottom: '1px solid #1a1a2e' }}
+    >
+      <span className="text-xs mr-2" style={{ color: '#374151', fontFamily: 'monospace' }}>BANK</span>
+      {Object.keys(banks).map((bankName, idx) => (
+        <button
+          key={bankName}
+          onClick={() => setActiveBank(bankName)}
+          className="px-2.5 py-0.5 rounded text-xs transition-all"
+          style={{
+            fontFamily: 'monospace',
+            fontWeight: 600,
+            background: activeBank === bankName ? 'rgba(6,182,212,0.15)' : 'transparent',
+            color: activeBank === bankName ? '#06b6d4' : '#4b5563',
+            border: activeBank === bankName ? '1px solid rgba(6,182,212,0.4)' : '1px solid transparent',
+            cursor: 'pointer',
+          }}
+          title={`切換到 Bank ${bankName}（Ctrl+${idx + 1}）`}
+        >
+          {bankName}
+        </button>
+      ))}
+      <button
+        onClick={handleAddBank}
+        className="px-2 py-0.5 rounded text-xs transition-all"
+        style={{
+          fontFamily: 'monospace',
+          background: 'transparent',
+          color: '#374151',
+          border: '1px solid #1f2937',
+          cursor: 'pointer',
+          lineHeight: 1,
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#06b6d4'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(6,182,212,0.3)' }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#374151'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#1f2937' }}
+        title="新增 Bank"
+      >
+        +
+      </button>
+    </div>
+  )
+
+  // ── VU Meter + Limiter toggle（嵌在 header 音量區） ──
+  const VUMeterAndLimiter = () => {
+    const pct = vuLevel * 100
+    let vuColor: string
+    if (pct < 60) {
+      vuColor = '#22c55e'
+    } else if (pct < 85) {
+      vuColor = '#eab308'
+    } else {
+      vuColor = '#ef4444'
+    }
+
+    return (
+      <div className="flex items-center gap-2">
+        {/* VU Meter */}
+        <div
+          style={{
+            width: 80,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: '#1f2937',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+          title={`VU: ${Math.round(pct)}%`}
+        >
+          <div
+            style={{
+              width: `${pct}%`,
+              height: '100%',
+              backgroundColor: vuColor,
+              borderRadius: 4,
+              transition: 'width 0.05s linear, background-color 0.05s linear',
+            }}
+          />
+        </div>
+        {/* Limiter 開關 */}
+        <button
+          onClick={handleLimiterToggle}
+          className="px-1.5 py-0.5 rounded text-xs transition-all"
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            background: limiterEnabled ? 'rgba(6,182,212,0.15)' : 'transparent',
+            color: limiterEnabled ? '#06b6d4' : '#4b5563',
+            border: limiterEnabled ? '1px solid rgba(6,182,212,0.4)' : '1px solid #374151',
+            cursor: 'pointer',
+          }}
+          title={`Limiter ${limiterEnabled ? '開啟' : '關閉'}`}
+        >
+          LIM
+        </button>
+      </div>
+    )
+  }
 
   /* ── 演出模式 ── */
   if (performanceMode) {
@@ -114,6 +295,9 @@ export default function Home() {
 
           {/* 右側控制 */}
           <div className="flex items-center gap-3">
+            {/* VU Meter + Limiter */}
+            <VUMeterAndLimiter />
+
             {/* 主音量 */}
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: '#6b7280', fontFamily: 'monospace', minWidth: '2.5rem', textAlign: 'right' }}>
@@ -158,6 +342,9 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        {/* Bank Tab 列 */}
+        <BankTabBar />
 
         {/* 鍵盤區域：撐滿剩餘空間 */}
         <div className="flex items-center justify-center flex-1 overflow-hidden p-4" style={{ minHeight: 0 }}>
@@ -224,6 +411,9 @@ export default function Home() {
 
           {/* 右側控制 */}
           <div className="flex items-center gap-3">
+            {/* VU Meter + Limiter */}
+            <VUMeterAndLimiter />
+
             {/* 主音量推桿 */}
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: '#6b7280', fontFamily: 'monospace', minWidth: '2.5rem', textAlign: 'right' }}>
@@ -277,6 +467,9 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        {/* Bank Tab 列 */}
+        <BankTabBar />
 
         {/* 鍵盤區域 */}
         <div className="flex items-center justify-center flex-1 overflow-auto p-4" style={{ minHeight: 0 }}>

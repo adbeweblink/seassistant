@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from 'react'
 import { useStore } from '@/store/useStore'
-import { playSound, stopSoundWithFade, isKeyPlaying, resumeAudioContext } from '@/lib/audio-engine'
+import { playSound, stopSoundWithFade, stopSound, isKeyPlaying, resumeAudioContext } from '@/lib/audio-engine'
 
-/** 不應被攔截的系統快捷鍵 */
 const PASS_THROUGH_KEYS = new Set([
   'F1', 'F2', 'F3', 'F4', 'F5', 'F6',
   'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
@@ -17,6 +16,8 @@ function isSystemCombo(e: KeyboardEvent): boolean {
 
 export function useKeyboardBinding() {
   const bindings = useStore((s) => s.bindings)
+  const banks = useStore((s) => s.banks)
+  const activeBank = useStore((s) => s.activeBank)
   const isEditing = useStore((s) => s.isEditing)
   const addPlayingKey = useStore((s) => s.addPlayingKey)
   const removePlayingKey = useStore((s) => s.removePlayingKey)
@@ -25,25 +26,30 @@ export function useKeyboardBinding() {
 
   const pressedKeys = useRef<Set<string>>(new Set())
   const bindingsRef = useRef(bindings)
+  const banksRef = useRef(banks)
+  const activeBankRef = useRef(activeBank)
   const isEditingRef = useRef(isEditing)
   const addCueLogRef = useRef(addCueLog)
   const performanceModeRef = useRef(performanceMode)
+  const addPlayingKeyRef = useRef(addPlayingKey)
+  const removePlayingKeyRef = useRef(removePlayingKey)
 
   useEffect(() => { bindingsRef.current = bindings }, [bindings])
+  useEffect(() => { banksRef.current = banks }, [banks])
+  useEffect(() => { activeBankRef.current = activeBank }, [activeBank])
   useEffect(() => { isEditingRef.current = isEditing }, [isEditing])
   useEffect(() => { addCueLogRef.current = addCueLog }, [addCueLog])
   useEffect(() => { performanceModeRef.current = performanceMode }, [performanceMode])
+  useEffect(() => { addPlayingKeyRef.current = addPlayingKey }, [addPlayingKey])
+  useEffect(() => { removePlayingKeyRef.current = removePlayingKey }, [removePlayingKey])
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // 演出模式下永遠接收鍵盤，否則 isEditing 時忽略
       if (!performanceModeRef.current && isEditingRef.current) return
       if (isSystemCombo(e)) return
       if (PASS_THROUGH_KEYS.has(e.key)) return
 
       const code = e.code
-
-      // 防止 keydown repeat
       if (pressedKeys.current.has(code)) return
       pressedKeys.current.add(code)
 
@@ -53,29 +59,38 @@ export function useKeyboardBinding() {
       e.preventDefault()
       await resumeAudioContext()
 
-      const mode = binding.playMode || 'hold'
+      const mode = binding.playMode || 'oneshot'
 
       if (mode === 'toggle') {
         if (isKeyPlaying(code)) {
           stopSoundWithFade(code, binding.fadeOut || 0)
-          removePlayingKey(code)
+          removePlayingKeyRef.current(code)
           addCueLogRef.current({ keyCode: code, soundFile: binding.soundFile!, action: 'stop' })
           return
         }
       }
 
-      // hold / oneshot / toggle(開始播放) → 都播放
-      // 從頭播放（已在播的會被 playSound 內部先 stop 再重播）
+      // Exclusive group：停止同 group 的其他音效
+      if (binding.exclusiveGroup != null) {
+        const currentBank = banksRef.current[activeBankRef.current] ?? {}
+        for (const [otherCode, otherBinding] of Object.entries(currentBank)) {
+          if (otherCode !== code && otherBinding.exclusiveGroup === binding.exclusiveGroup && isKeyPlaying(otherCode)) {
+            stopSoundWithFade(otherCode, otherBinding.fadeOut || 0)
+            removePlayingKeyRef.current(otherCode)
+          }
+        }
+      }
+
       playSound(code, binding.soundFile, {
         startTime: binding.startTime,
         endTime: binding.endTime,
         volume: binding.volume,
         loop: binding.loop,
         fadeIn: binding.fadeIn || 0,
-        onEnded: () => removePlayingKey(code),
+        onEnded: () => removePlayingKeyRef.current(code),
       })
 
-      addPlayingKey(code)
+      addPlayingKeyRef.current(code)
       addCueLogRef.current({ keyCode: code, soundFile: binding.soundFile!, action: 'play' })
     }
 
@@ -88,13 +103,10 @@ export function useKeyboardBinding() {
 
       const mode = binding.playMode || 'hold'
 
-      // hold 模式：放開就停（淡出）
       if (mode === 'hold' && !binding.loop) {
         stopSoundWithFade(code, binding.fadeOut || 0)
-        removePlayingKey(code)
+        removePlayingKeyRef.current(code)
       }
-      // oneshot 模式：放開不管，播完自己停
-      // toggle 模式：放開不管，等下次按鍵切換
     }
 
     const handleBlur = () => {
@@ -111,5 +123,5 @@ export function useKeyboardBinding() {
       window.removeEventListener('blur', handleBlur)
       pressedKeys.current.clear()
     }
-  }, [addPlayingKey, removePlayingKey])
+  }, [])
 }

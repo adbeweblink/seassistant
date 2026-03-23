@@ -4,7 +4,8 @@ import { useState, useRef } from 'react'
 import { Settings, FolderOpen, Download, Upload, StopCircle, Trash2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { stopAll } from '@/lib/audio-engine'
-import type { KeyboardConfig } from '@/lib/types'
+// KeyboardConfig 型別僅用於 exportConfig 回傳，loadConfig 已內建 v1/v2 相容
+
 
 export function ConfigPanel() {
   const {
@@ -48,11 +49,8 @@ export function ConfigPanel() {
       try {
         const raw = ev.target?.result
         if (typeof raw !== 'string') return
-        const config = JSON.parse(raw) as KeyboardConfig
-        if (config.version !== 1) {
-          alert('不支援的配置版本')
-          return
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const config = JSON.parse(raw) as any
         loadConfig(config)
       } catch {
         alert('無法解析設定檔，請確認格式正確')

@@ -3,9 +3,8 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '@/store/useStore'
 import { preloadSound } from '@/lib/audio-engine'
-import type { KeyboardConfig } from '@/lib/types'
+import type { KeyboardConfig, KeyboardConfigV1 } from '@/lib/types'
 
-/** 啟動時載入上次儲存的配置 + 預載所有綁定音效 */
 export function useInitialLoad() {
   const loadConfig = useStore((s) => s.loadConfig)
   const loaded = useRef(false)
@@ -16,16 +15,25 @@ export function useInitialLoad() {
 
     fetch('/api/config')
       .then((res) => res.json())
-      .then((config: KeyboardConfig) => {
-        if (config.bindings && Object.keys(config.bindings).length > 0) {
-          loadConfig(config)
-          // 預載所有綁定的音效
-          const filenames = new Set<string>()
-          for (const binding of Object.values(config.bindings)) {
-            if (binding.soundFile) filenames.add(binding.soundFile)
+      .then((config: KeyboardConfig | KeyboardConfigV1) => {
+        loadConfig(config)
+
+        // 預載所有 bank 的音效
+        const filenames = new Set<string>()
+        if (config.version === 1) {
+          const v1 = config as KeyboardConfigV1
+          for (const b of Object.values(v1.bindings)) {
+            if (b.soundFile) filenames.add(b.soundFile)
           }
-          filenames.forEach((f) => preloadSound(f).catch(() => {}))
+        } else {
+          const v2 = config as KeyboardConfig
+          for (const bank of Object.values(v2.banks)) {
+            for (const b of Object.values(bank)) {
+              if (b.soundFile) filenames.add(b.soundFile)
+            }
+          }
         }
+        filenames.forEach((f) => preloadSound(f).catch(() => {}))
       })
       .catch(() => {})
   }, [loadConfig])

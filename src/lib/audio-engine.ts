@@ -2,6 +2,9 @@
 
 let audioContext: AudioContext | null = null
 let masterGain: GainNode | null = null
+let limiterNode: DynamicsCompressorNode | null = null
+let analyserNode: AnalyserNode | null = null
+let limiterEnabled = true
 
 const bufferCache = new Map<string, AudioBuffer>()
 const inflightLoads = new Map<string, Promise<AudioBuffer>>()
@@ -11,7 +14,24 @@ export function getAudioContext(): AudioContext {
   if (!audioContext) {
     audioContext = new AudioContext({ latencyHint: 'interactive' })
     masterGain = audioContext.createGain()
-    masterGain.connect(audioContext.destination)
+
+    // Limiter（DynamicsCompressor）
+    limiterNode = audioContext.createDynamicsCompressor()
+    limiterNode.threshold.value = -6
+    limiterNode.knee.value = 30
+    limiterNode.ratio.value = 12
+    limiterNode.attack.value = 0.003
+    limiterNode.release.value = 0.25
+
+    // Analyser（VU Meter 用）
+    analyserNode = audioContext.createAnalyser()
+    analyserNode.fftSize = 256
+    analyserNode.smoothingTimeConstant = 0.8
+
+    // 連接鏈：masterGain → limiter → analyser → destination
+    masterGain.connect(limiterNode)
+    limiterNode.connect(analyserNode)
+    analyserNode.connect(audioContext.destination)
   }
   return audioContext
 }
@@ -28,6 +48,33 @@ export function setMasterVolume(vol: number): void {
   if (masterGain) {
     masterGain.gain.setValueAtTime(vol, ctx.currentTime)
   }
+}
+
+/** 開關 Limiter */
+export function setLimiterEnabled(on: boolean): void {
+  getAudioContext()
+  if (!masterGain || !limiterNode || !analyserNode) return
+  limiterEnabled = on
+  // 重新連接：bypass limiter 時直接 gain → analyser → dest
+  masterGain.disconnect()
+  if (on) {
+    masterGain.connect(limiterNode)
+    limiterNode.connect(analyserNode)
+  } else {
+    limiterNode.disconnect()
+    masterGain.connect(analyserNode)
+  }
+  analyserNode.connect(audioContext!.destination)
+}
+
+/** 取得 VU Meter 數值 0-1 */
+export function getVULevel(): number {
+  if (!analyserNode) return 0
+  const data = new Uint8Array(analyserNode.frequencyBinCount)
+  analyserNode.getByteFrequencyData(data)
+  let sum = 0
+  for (let i = 0; i < data.length; i++) sum += data[i]
+  return sum / (data.length * 255)
 }
 
 export async function resumeAudioContext(): Promise<void> {
@@ -164,6 +211,18 @@ function stopSoundImmediate(keyCode: string): void {
     node.gain.disconnect()
     activeNodes.delete(keyCode)
   }
+}
+
+/** 停止同 exclusive group 的其他音效 */
+export function stopExclusiveGroup(group: number, exceptKeyCode: string): string[] {
+  const stopped: string[] = []
+  activeNodes.forEach((_, key) => {
+    if (key !== exceptKeyCode) {
+      // caller 負責判斷 group 是否匹配
+      stopped.push(key)
+    }
+  })
+  return stopped
 }
 
 /** 取得播放進度 0-1，不在播放時回 null */

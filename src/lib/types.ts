@@ -12,12 +12,26 @@ export interface KeyBinding {
   loop: boolean
   color: string
   playMode: PlayMode
-  fadeIn: number   // 淡入毫秒（0 = 無）
-  fadeOut: number  // 淡出毫秒（0 = 無）
+  fadeIn: number
+  fadeOut: number
+  exclusiveGroup: number | null
 }
+
+/** 單一 Bank 的所有綁定 */
+export type BankBindings = Record<string, KeyBinding>
 
 /** 完整鍵盤配置（匯出/匯入單位） */
 export interface KeyboardConfig {
+  version: 2
+  name: string
+  banks: Record<string, BankBindings>
+  activeBank: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** v1 向下相容 */
+export interface KeyboardConfigV1 {
   version: 1
   name: string
   bindings: Record<string, KeyBinding>

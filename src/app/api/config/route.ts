@@ -7,9 +7,10 @@ const CONFIG_PATH = path.join(process.cwd(), 'config')
 const KEYBOARD_FILE = path.join(CONFIG_PATH, 'keyboard.json')
 
 const DEFAULT_CONFIG: KeyboardConfig = {
-  version: 1,
+  version: 2,
   name: '預設配置',
-  bindings: {},
+  banks: { A: {} },
+  activeBank: 'A',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 }
@@ -21,7 +22,8 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const raw = fs.readFileSync(KEYBOARD_FILE, 'utf-8')
-    const config: KeyboardConfig = JSON.parse(raw)
+    const config = JSON.parse(raw)
+    // 直接回傳，loadConfig 會處理 v1/v2 相容
     return NextResponse.json(config)
   } catch (err) {
     console.error('[API /config]', err)
@@ -37,15 +39,11 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: '無效的 JSON 格式' }, { status: 400 })
   }
 
-  // 基本欄位驗證
-  if (config.version !== 1) {
-    return NextResponse.json({ error: '不支援的配置版本' }, { status: 400 })
-  }
   if (typeof config.name !== 'string' || !config.name.trim()) {
     return NextResponse.json({ error: '配置名稱不可為空' }, { status: 400 })
   }
-  if (typeof config.bindings !== 'object' || config.bindings === null) {
-    return NextResponse.json({ error: '無效的 bindings 格式' }, { status: 400 })
+  if (typeof config.banks !== 'object' || config.banks === null) {
+    return NextResponse.json({ error: '無效的 banks 格式' }, { status: 400 })
   }
 
   try {

@@ -15,7 +15,15 @@ interface VolumeControlProps {
   playMode: PlayMode
   fadeIn: number
   fadeOut: number
-  onChange: (updates: { volume?: number; loop?: boolean; playMode?: PlayMode; fadeIn?: number; fadeOut?: number }) => void
+  exclusiveGroup: number | null
+  onChange: (updates: {
+    volume?: number
+    loop?: boolean
+    playMode?: PlayMode
+    fadeIn?: number
+    fadeOut?: number
+    exclusiveGroup?: number | null
+  }) => void
 }
 
 export default function VolumeControl({
@@ -24,6 +32,7 @@ export default function VolumeControl({
   playMode,
   fadeIn,
   fadeOut,
+  exclusiveGroup,
   onChange,
 }: VolumeControlProps) {
   const volumePercent = Math.round(volume * 100)
@@ -179,6 +188,40 @@ export default function VolumeControl({
           <span className="text-xs font-mono text-slate-400 w-12">
             {fadeOut > 0 ? `${(fadeOut / 1000).toFixed(1)}s` : '無'}
           </span>
+        </div>
+      </div>
+
+      {/* 第四行：互斥群組 */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500 w-14 shrink-0">互斥群組</span>
+        <div className="flex gap-1 flex-wrap">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <button
+              key={n}
+              onClick={() => onChange({ exclusiveGroup: exclusiveGroup === n ? null : n })}
+              className={[
+                'w-7 h-7 rounded text-xs transition-all border font-mono',
+                exclusiveGroup === n
+                  ? 'bg-violet-900/60 border-violet-500 text-violet-300'
+                  : 'bg-transparent border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200',
+              ].join(' ')}
+              title={`互斥群組 ${n}`}
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            onClick={() => onChange({ exclusiveGroup: null })}
+            className={[
+              'px-2 h-7 rounded text-xs transition-all border',
+              exclusiveGroup === null
+                ? 'bg-slate-700 border-slate-400 text-slate-200'
+                : 'bg-transparent border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200',
+            ].join(' ')}
+            title="不設互斥群組"
+          >
+            無
+          </button>
         </div>
       </div>
     </div>

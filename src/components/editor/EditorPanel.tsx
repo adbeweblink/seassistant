@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, ChevronUp, Sliders } from 'lucide-react'
 import { useStore } from '@/store/useStore'
+import type { KeyBinding } from '@/lib/types'
 import { getBufferDuration, preloadSound } from '@/lib/audio-engine'
 import TimeRangeControl from './TimeRangeControl'
 import VolumeControl from './VolumeControl'
@@ -59,9 +60,9 @@ export default function EditorPanel() {
     setBinding(selectedKey, updates)
   }
 
-  // 更新 volume / loop
+  // 更新 volume / loop / playMode / fadeIn / fadeOut / exclusiveGroup
   const handleParamUpdate = (
-    updates: { volume?: number; loop?: boolean }
+    updates: Partial<Pick<KeyBinding, 'volume' | 'loop' | 'playMode' | 'fadeIn' | 'fadeOut' | 'exclusiveGroup'>>
   ) => {
     if (!selectedKey) return
     setBinding(selectedKey, updates)
@@ -172,6 +173,7 @@ export default function EditorPanel() {
                   playMode={binding.playMode || 'oneshot'}
                   fadeIn={binding.fadeIn || 0}
                   fadeOut={binding.fadeOut || 0}
+                  exclusiveGroup={binding.exclusiveGroup ?? null}
                   onChange={handleParamUpdate}
                 />
               </div>
