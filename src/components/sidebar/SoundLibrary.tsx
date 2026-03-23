@@ -217,12 +217,27 @@ export function SoundLibrary() {
     }
   }
 
+  const banks = useStore((s) => s.banks)
+  const activeBank = useStore((s) => s.activeBank)
+  const removeBinding = useStore((s) => s.removeBinding)
+
   async function handleDelete(filename: string) {
     try {
-      await fetch(`/api/sounds/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+      const res = await fetch(`/api/sounds/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        alert('刪除失敗')
+        return
+      }
+      // 清理所有綁定到此音效的按鍵
+      const bank = banks[activeBank] ?? {}
+      for (const [keyCode, binding] of Object.entries(bank)) {
+        if (binding.soundFile === filename) {
+          removeBinding(keyCode)
+        }
+      }
       await refresh()
     } catch {
-      // 靜默失敗，下次 refresh 會重新同步
+      alert('刪除失敗，請重試')
     }
   }
 
@@ -359,6 +374,13 @@ export function SoundLibrary() {
           paddingBottom: '8px',
         }}
       >
+        {loading && !error && (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#475569', fontSize: '12px' }}>
+            <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite', marginBottom: 8, display: 'inline-block' }} />
+            <div>載入音效庫…</div>
+          </div>
+        )}
+
         {error && (
           <div
             style={{

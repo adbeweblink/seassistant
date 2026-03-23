@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw } from 'lucide-react'
+import { useStore } from '@/store/useStore'
 
 interface TimeRangeControlProps {
   startTime: number
@@ -75,6 +76,7 @@ function TimeInput({ label, value, min, max, onChange }: TimeInputProps) {
 
   const handleBlur = useCallback(() => {
     isFocusedRef.current = false
+    setIsEditing(false)
     const parsed = parseDisplay(inputValue)
     if (parsed === null || parsed < min || parsed > max) {
       // 無效輸入 → 還原
@@ -88,8 +90,11 @@ function TimeInput({ label, value, min, max, onChange }: TimeInputProps) {
     }
   }, [inputValue, value, min, max, onChange])
 
+  const setIsEditing = useStore((s) => s.setIsEditing)
+
   const handleFocus = () => {
     isFocusedRef.current = true
+    setIsEditing(true)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

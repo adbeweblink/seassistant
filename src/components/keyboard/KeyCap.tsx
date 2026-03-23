@@ -155,6 +155,8 @@ const KeyCap = React.memo(function KeyCap({
       setDragFilename(null)
       const soundFile = e.dataTransfer.getData('text/plain')
       if (!soundFile) return
+      // 驗證是合法的音效檔名（有音效副檔名）
+      if (!/\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(soundFile)) return
       setBinding(keyDef.code, {
         keyCode: keyDef.code,
         soundFile,
