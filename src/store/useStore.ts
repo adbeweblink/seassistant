@@ -54,6 +54,11 @@ interface SEAssistantState {
   configName: string
   setConfigName: (name: string) => void
 
+  // Undo
+  undoStack: Record<string, KeyBinding>[]
+  pushUndo: () => void
+  undo: () => void
+
   // 自動存檔標記
   isDirty: boolean
   setDirty: (dirty: boolean) => void
@@ -63,6 +68,7 @@ export const useStore = create<SEAssistantState>((set, get) => ({
   bindings: {},
   setBinding: (keyCode, updates) =>
     set((state) => ({
+      undoStack: [{ ...state.bindings }, ...state.undoStack].slice(0, 20),
       bindings: {
         ...state.bindings,
         [keyCode]: {
@@ -88,7 +94,7 @@ export const useStore = create<SEAssistantState>((set, get) => ({
     set((state) => {
       const newBindings = { ...state.bindings }
       delete newBindings[keyCode]
-      return { bindings: newBindings, isDirty: true }
+      return { undoStack: [{ ...state.bindings }, ...state.undoStack].slice(0, 20), bindings: newBindings, isDirty: true }
     }),
 
   selectedKey: null,
@@ -151,6 +157,18 @@ export const useStore = create<SEAssistantState>((set, get) => ({
       updatedAt: new Date().toISOString(),
     }
   },
+
+  undoStack: [],
+  pushUndo: () =>
+    set((state) => ({
+      undoStack: [{ ...state.bindings }, ...state.undoStack].slice(0, 20),
+    })),
+  undo: () =>
+    set((state) => {
+      if (state.undoStack.length === 0) return {}
+      const [prev, ...rest] = state.undoStack
+      return { bindings: prev, undoStack: rest, isDirty: true }
+    }),
 
   isDirty: false,
   setDirty: (dirty) => set({ isDirty: dirty }),

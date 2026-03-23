@@ -109,3 +109,12 @@ export const KEY_COLORS = [
 export function getKeyColor(index: number): string {
   return KEY_COLORS[index % KEY_COLORS.length]
 }
+
+/** 根據檔名 hash 取穩定色（同檔名同色） */
+export function getColorForFilename(filename: string): string {
+  let hash = 0
+  for (let i = 0; i < filename.length; i++) {
+    hash = ((hash << 5) - hash + filename.charCodeAt(i)) | 0
+  }
+  return KEY_COLORS[Math.abs(hash) % KEY_COLORS.length]
+}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Music, Youtube, Settings, ChevronDown } from 'lucide-react'
+import { Music, Youtube, Settings, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SoundLibrary } from './SoundLibrary'
 import { YouTubeDownloader } from '@/components/youtube/YouTubeDownloader'
 import { ConfigPanel } from './ConfigPanel'
@@ -42,6 +42,7 @@ const MAX_WIDTH = 480
 const DEFAULT_WIDTH = 300
 
 export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false)
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>(() =>
     Object.fromEntries(SECTIONS.map((s) => [s.id, s.defaultOpen])) as Record<SectionId, boolean>
   )
@@ -81,6 +82,52 @@ export function Sidebar() {
     window.addEventListener('mouseup', onMouseUp)
   }, [sidebarWidth])
 
+  // 收合狀態 JSX
+  if (collapsed) {
+    return (
+      <div style={{
+        width: 40,
+        background: '#0f0f1a',
+        borderRight: '1px solid #1e293b',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 8,
+        gap: 4,
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={() => setCollapsed(false)}
+          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 8 }}
+          title="展開側邊欄"
+        >
+          <ChevronRight size={16} />
+        </button>
+        <button
+          onClick={() => setCollapsed(false)}
+          style={{ background: 'none', border: 'none', color: '#22d3ee', cursor: 'pointer', padding: 8 }}
+          title="音效庫"
+        >
+          <Music size={16} />
+        </button>
+        <button
+          onClick={() => setCollapsed(false)}
+          style={{ background: 'none', border: 'none', color: '#22d3ee', cursor: 'pointer', padding: 8 }}
+          title="YouTube 下載"
+        >
+          <Youtube size={16} />
+        </button>
+        <button
+          onClick={() => setCollapsed(false)}
+          style={{ background: 'none', border: 'none', color: '#22d3ee', cursor: 'pointer', padding: 8 }}
+          title="設定"
+        >
+          <Settings size={16} />
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div
       style={{
@@ -97,6 +144,17 @@ export function Sidebar() {
         overflow: 'hidden',
       }}
     >
+      {/* 收合按鈕 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-start', padding: '4px 8px', flexShrink: 0 }}>
+        <button
+          onClick={() => setCollapsed(true)}
+          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+          title="收合側邊欄"
+        >
+          <ChevronLeft size={14} />
+        </button>
+      </div>
+
       {/* 內容區域 */}
       <div
         style={{

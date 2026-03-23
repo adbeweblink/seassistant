@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import KeyboardLayout from '@/components/keyboard/KeyboardLayout'
 import EditorPanel from '@/components/editor/EditorPanel'
 import { Sidebar } from '@/components/sidebar/Sidebar'
@@ -8,9 +8,10 @@ import { useKeyboardBinding } from '@/hooks/useKeyboardBinding'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { resumeAudioContext, stopAll, setMasterVolume } from '@/lib/audio-engine'
 import { useInitialLoad } from '@/hooks/useInitialLoad'
-import { StopCircle, Zap, X } from 'lucide-react'
+import { StopCircle, Zap, X, HelpCircle } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import type { CueLogEntry } from '@/store/useStore'
+import { HelpOverlay } from '@/components/ui/HelpOverlay'
 
 export default function Home() {
   useKeyboardBinding()
@@ -22,6 +23,22 @@ export default function Home() {
   const masterVolume = useStore((s) => s.masterVolume)
   const setMasterVolumeStore = useStore((s) => s.setMasterVolume)
   const cueLog = useStore((s) => s.cueLog)
+  const undo = useStore((s) => s.undo)
+
+  // 演出模式時鐘
+  const [clock, setClock] = useState('')
+  useEffect(() => {
+    if (!performanceMode) return
+    const tick = () => {
+      const now = new Date()
+      setClock(
+        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+      )
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [performanceMode])
 
   // 第一次互動時啟動 AudioContext
   useEffect(() => {
@@ -49,6 +66,18 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [performanceMode, setPerformanceMode])
 
+  // Ctrl+Z Undo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault()
+        undo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [undo])
+
   const handleMasterVolume = useCallback(
     (vol: number) => {
       setMasterVolumeStore(vol)
@@ -69,15 +98,19 @@ export default function Home() {
         className="flex flex-col h-screen overflow-hidden"
         style={{ backgroundColor: '#000' }}
       >
+        <HelpOverlay />
         {/* 縮小版 header */}
         <header
           className="flex items-center justify-between px-4 py-1.5 shrink-0"
           style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}
         >
-          {/* logo */}
-          <span className="text-sm font-bold tracking-wider" style={{ color: '#06b6d4' }}>
-            SEAssistant
-          </span>
+          {/* logo + 時鐘 */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold tracking-wider" style={{ color: '#06b6d4' }}>
+              SEAssistant
+            </span>
+            <span style={{ fontFamily: 'monospace', fontSize: 14, color: '#6b7280', letterSpacing: '0.1em' }}>{clock}</span>
+          </div>
 
           {/* 右側控制 */}
           <div className="flex items-center gap-3">
@@ -162,6 +195,7 @@ export default function Home() {
   /* ── 一般模式 ── */
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+      <HelpOverlay />
       {/* 左側邊欄 */}
       <Sidebar />
 
@@ -231,6 +265,15 @@ export default function Home() {
             >
               <Zap size={14} />
               演出模式
+            </button>
+
+            {/* 快捷鍵說明按鈕 */}
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}
+              title="快捷鍵說明（?）"
+            >
+              <HelpCircle size={14} style={{ color: '#475569' }} />
             </button>
           </div>
         </header>

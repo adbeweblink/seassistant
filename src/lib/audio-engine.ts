@@ -5,7 +5,7 @@ let masterGain: GainNode | null = null
 
 const bufferCache = new Map<string, AudioBuffer>()
 const inflightLoads = new Map<string, Promise<AudioBuffer>>()
-const activeNodes = new Map<string, { source: AudioBufferSourceNode; gain: GainNode }>()
+const activeNodes = new Map<string, { source: AudioBufferSourceNode; gain: GainNode; startedAt: number; offset: number; duration: number }>()
 
 export function getAudioContext(): AudioContext {
   if (!audioContext) {
@@ -121,7 +121,8 @@ export function playSound(
 
   source.start(0, start, source.loop ? undefined : duration)
 
-  activeNodes.set(keyCode, { source, gain: gainNode })
+  const totalDuration = duration ?? (buffer.duration - start)
+  activeNodes.set(keyCode, { source, gain: gainNode, startedAt: ctx.currentTime, offset: start, duration: totalDuration })
 
   source.onended = () => {
     const node = activeNodes.get(keyCode)
@@ -163,6 +164,16 @@ function stopSoundImmediate(keyCode: string): void {
     node.gain.disconnect()
     activeNodes.delete(keyCode)
   }
+}
+
+/** 取得播放進度 0-1，不在播放時回 null */
+export function getPlaybackProgress(keyCode: string): number | null {
+  const node = activeNodes.get(keyCode)
+  if (!node) return null
+  const ctx = getAudioContext()
+  const elapsed = ctx.currentTime - node.startedAt
+  if (node.duration <= 0) return 0
+  return Math.min(1, elapsed / node.duration)
 }
 
 /** 停止播放（向下相容，無淡出） */

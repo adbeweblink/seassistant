@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import type { KeyDef } from '@/lib/keyboard-map'
-import { getKeyColor } from '@/lib/keyboard-map'
+import { getColorForFilename } from '@/lib/keyboard-map'
 import type { KeyBinding } from '@/lib/types'
 import { useStore } from '@/store/useStore'
-import { preloadSound, playSound, stopSound } from '@/lib/audio-engine'
+import { preloadSound, playSound, stopSound, getPlaybackProgress } from '@/lib/audio-engine'
 
 interface KeyCapProps {
   keyDef: KeyDef
@@ -44,6 +44,27 @@ const KeyCap = React.memo(function KeyCap({
   const pendingSound = useStore((s) => s.pendingSound)
   const setPendingSound = useStore((s) => s.setPendingSound)
   const performanceMode = useStore((s) => s.performanceMode)
+
+  // 拖曳高亮狀態
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  // 播放進度狀態
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    if (!isPlaying) {
+      setProgress(0)
+      return
+    }
+    let raf: number
+    const tick = () => {
+      const p = getPlaybackProgress(keyDef.code)
+      setProgress(p ?? 0)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [isPlaying, keyDef.code])
 
   /** 演出模式下放大按鍵 */
   const BASE_WIDTH = performanceMode ? 64 : 48
@@ -98,7 +119,7 @@ const KeyCap = React.memo(function KeyCap({
         endTime: null,
         volume: 1,
         loop: false,
-        color: getKeyColor(Math.random() * 10 | 0),
+        color: getColorForFilename(pendingSound),
         playMode: 'oneshot',
         fadeIn: 0,
         fadeOut: 0,
@@ -112,11 +133,17 @@ const KeyCap = React.memo(function KeyCap({
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setIsDragOver(false)
   }, [])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
+      setIsDragOver(false)
       const soundFile = e.dataTransfer.getData('text/plain')
       if (!soundFile) return
       setBinding(keyDef.code, {
@@ -127,7 +154,7 @@ const KeyCap = React.memo(function KeyCap({
         endTime: null,
         volume: 1,
         loop: false,
-        color: accentColor,
+        color: getColorForFilename(soundFile),
         playMode: 'oneshot',
         fadeIn: 0,
         fadeOut: 0,
@@ -181,6 +208,7 @@ const KeyCap = React.memo(function KeyCap({
         }
       }}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={isPlaying ? (hasBound ? 'key-playing-colored' : 'key-playing') : ''}
       style={{
@@ -190,8 +218,10 @@ const KeyCap = React.memo(function KeyCap({
         flexShrink: 0,
         // 外觀
         borderRadius: '8px',
-        border: `${borderWidth}px solid ${borderColor}`,
-        background: `linear-gradient(180deg, ${topGradientColor} 0%, ${bgColor} 100%)`,
+        border: isDragOver ? '2px dashed #06b6d4' : `${borderWidth}px solid ${borderColor}`,
+        background: isDragOver
+          ? `linear-gradient(180deg, rgba(6,182,212,0.15) 0%, rgba(6,182,212,0.1) 100%)`
+          : `linear-gradient(180deg, ${topGradientColor} 0%, ${bgColor} 100%)`,
         boxShadow,
         // 文字
         display: 'flex',
@@ -268,6 +298,23 @@ const KeyCap = React.memo(function KeyCap({
             height: '2px',
             borderRadius: '0 0 2px 2px',
             background: '#06b6d4',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {/* 播放進度條 */}
+      {isPlaying && progress > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            height: '3px',
+            width: `${progress * 100}%`,
+            background: '#22c55e',
+            borderRadius: '0 0 8px 8px',
+            transition: 'width 0.1s linear',
             pointerEvents: 'none',
           }}
         />
