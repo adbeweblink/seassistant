@@ -85,6 +85,9 @@ const KeyCap = React.memo(function KeyCap({
         volume: 1,
         loop: false,
         color: getKeyColor(Math.random() * 10 | 0),
+        playMode: 'oneshot',
+        fadeIn: 0,
+        fadeOut: 0,
       })
       setPendingSound(null)
     }
@@ -110,6 +113,9 @@ const KeyCap = React.memo(function KeyCap({
         volume: 1,
         loop: false,
         color: accentColor,
+        playMode: 'oneshot',
+        fadeIn: 0,
+        fadeOut: 0,
       })
       setSelectedKey(keyDef.code)
     },

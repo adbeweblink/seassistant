@@ -161,14 +161,17 @@ export default function EditorPanel() {
                 />
               </div>
 
-              {/* 音量 + Loop */}
+              {/* 音量 + 模式 + 淡入淡出 */}
               <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-700/50">
                 <h3 className="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">
-                  音量與循環
+                  播放設定
                 </h3>
                 <VolumeControl
                   volume={binding.volume}
                   loop={binding.loop}
+                  playMode={binding.playMode || 'oneshot'}
+                  fadeIn={binding.fadeIn || 0}
+                  fadeOut={binding.fadeOut || 0}
                   onChange={handleParamUpdate}
                 />
               </div>

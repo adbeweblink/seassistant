@@ -1,3 +1,6 @@
+/** 播放模式 */
+export type PlayMode = 'hold' | 'oneshot' | 'toggle'
+
 /** 單一按鍵的音效綁定設定 */
 export interface KeyBinding {
   keyCode: string
@@ -8,6 +11,9 @@ export interface KeyBinding {
   volume: number
   loop: boolean
   color: string
+  playMode: PlayMode
+  fadeIn: number   // 淡入毫秒（0 = 無）
+  fadeOut: number  // 淡出毫秒（0 = 無）
 }
 
 /** 完整鍵盤配置（匯出/匯入單位） */

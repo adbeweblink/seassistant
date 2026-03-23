@@ -50,6 +50,11 @@ export async function preloadSound(filename: string): Promise<AudioBuffer> {
   return promise
 }
 
+/** 檢查某鍵是否正在播放 */
+export function isKeyPlaying(keyCode: string): boolean {
+  return activeNodes.has(keyCode)
+}
+
 /** 播放音效 */
 export function playSound(
   keyCode: string,
@@ -59,6 +64,7 @@ export function playSound(
     endTime?: number | null
     volume?: number
     loop?: boolean
+    fadeIn?: number
     onEnded?: () => void
   } = {}
 ): void {
@@ -66,14 +72,23 @@ export function playSound(
   const buffer = bufferCache.get(filename)
   if (!buffer) return
 
-  // 如果此鍵已在播放，先停掉
-  stopSound(keyCode)
+  // 如果此鍵已在播放，先停掉（無淡出，因為要立即重播）
+  stopSoundImmediate(keyCode)
 
   const source = ctx.createBufferSource()
   source.buffer = buffer
 
+  const targetVolume = options.volume ?? 1
+  const fadeInMs = options.fadeIn ?? 0
   const gainNode = ctx.createGain()
-  gainNode.gain.value = options.volume ?? 1
+
+  // 淡入：從 0 漸增到目標音量
+  if (fadeInMs > 0) {
+    gainNode.gain.setValueAtTime(0, ctx.currentTime)
+    gainNode.gain.linearRampToValueAtTime(targetVolume, ctx.currentTime + fadeInMs / 1000)
+  } else {
+    gainNode.gain.value = targetVolume
+  }
 
   source.connect(gainNode).connect(ctx.destination)
   source.loop = options.loop ?? false
@@ -101,18 +116,41 @@ export function playSound(
   }
 }
 
-/** 停止播放 */
-export function stopSound(keyCode: string): void {
+/** 淡出停止（有淡出時間則漸弱，否則立即停止） */
+export function stopSoundWithFade(keyCode: string, fadeOutMs: number = 0): void {
+  const node = activeNodes.get(keyCode)
+  if (!node) return
+
+  if (fadeOutMs > 0) {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+    node.gain.gain.cancelScheduledValues(now)
+    node.gain.gain.setValueAtTime(node.gain.gain.value, now)
+    node.gain.gain.linearRampToValueAtTime(0, now + fadeOutMs / 1000)
+    // 淡出結束後真正停止
+    setTimeout(() => {
+      try { node.source.stop() } catch { /* 已停 */ }
+      node.gain.disconnect()
+      activeNodes.delete(keyCode)
+    }, fadeOutMs)
+  } else {
+    stopSoundImmediate(keyCode)
+  }
+}
+
+/** 立即停止（無淡出） */
+function stopSoundImmediate(keyCode: string): void {
   const node = activeNodes.get(keyCode)
   if (node) {
-    try {
-      node.source.stop()
-    } catch {
-      // 已停止
-    }
+    try { node.source.stop() } catch { /* 已停 */ }
     node.gain.disconnect()
     activeNodes.delete(keyCode)
   }
+}
+
+/** 停止播放（向下相容，無淡出） */
+export function stopSound(keyCode: string): void {
+  stopSoundImmediate(keyCode)
 }
 
 /** 停止所有播放 */
