@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 
 const CONFIG_PATH = path.join(process.cwd(), 'config')
 const SETTINGS_FILE = path.join(CONFIG_PATH, 'settings.json')
@@ -21,7 +22,8 @@ export function getSoundsDir(): string {
     console.warn('[sounds-dir] settings.json 解析失敗', e)
   }
 
-  _cachedDir = path.resolve(process.env.SOUNDS_DIR || './sounds')
+  const defaultDir = path.join(os.homedir(), 'Desktop', 'SEAssistant Sounds')
+  _cachedDir = path.resolve(process.env.SOUNDS_DIR || defaultDir)
   return _cachedDir
 }
 

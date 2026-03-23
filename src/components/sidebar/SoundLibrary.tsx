@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Music, Upload, RefreshCw, Search, Trash2, Play, Square } from 'lucide-react'
 import { useSoundLibrary } from '@/hooks/useSoundLibrary'
 import { useStore } from '@/store/useStore'
@@ -200,6 +200,22 @@ export function SoundLibrary({ sounds, loading, error, refresh }: SoundLibraryPr
   function handleSelectSound(filename: string) {
     setPendingSound(pendingSound === filename ? null : filename)
   }
+
+  // Delete 鍵刪除選取的音效
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' && pendingSound) {
+        e.preventDefault()
+        if (confirm(`確定刪除「${pendingSound}」？`)) {
+          handleDelete(pendingSound)
+          setPendingSound(null)
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSound])
 
   const filtered = sounds.filter((s) =>
     s.filename.toLowerCase().includes(search.toLowerCase())

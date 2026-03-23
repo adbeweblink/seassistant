@@ -61,7 +61,33 @@ export function ConfigPanel() {
     reader.readAsText(file)
   }
 
-  // 儲存音效資料夾路徑
+  // 開啟資料夾選擇視窗
+  async function handleBrowseFolder() {
+    setSavingFolder(true)
+    try {
+      const res = await fetch('/api/folder/browse', { method: 'POST' })
+      const data = await res.json()
+      if (data.cancelled || !data.path) {
+        setSavingFolder(false)
+        return
+      }
+      // 儲存選擇的路徑
+      await fetch('/api/folder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soundsDir: data.path }),
+      })
+      setSoundsDir(data.path)
+      setFolderInput(data.path)
+      setEditingFolder(false)
+    } catch {
+      alert('選擇資料夾失敗')
+    } finally {
+      setSavingFolder(false)
+    }
+  }
+
+  // 手動輸入路徑儲存
   async function handleSaveFolder() {
     if (!folderInput.trim()) return
     setSavingFolder(true)
@@ -74,7 +100,7 @@ export function ConfigPanel() {
       setSoundsDir(folderInput.trim())
       setEditingFolder(false)
     } catch {
-      // 失敗不 alert，只關閉編輯
+      alert('儲存路徑失敗')
     } finally {
       setSavingFolder(false)
     }
@@ -219,11 +245,9 @@ export function ConfigPanel() {
               {soundsDir}
             </div>
             <button
-              onClick={() => {
-                setFolderInput(soundsDir)
-                setEditingFolder(true)
-              }}
-              title="修改路徑"
+              onClick={handleBrowseFolder}
+              disabled={savingFolder}
+              title="選擇資料夾"
               style={{
                 padding: '6px 8px',
                 background: 'transparent',
