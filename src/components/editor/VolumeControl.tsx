@@ -3,10 +3,10 @@
 import { Volume2, VolumeX, Repeat } from 'lucide-react'
 import type { PlayMode } from '@/lib/types'
 
-const PLAY_MODE_OPTIONS: { value: PlayMode; label: string; desc: string }[] = [
-  { value: 'oneshot', label: '單次', desc: '按一下播完整段' },
-  { value: 'hold', label: '按住', desc: '按住播放，放開停止' },
-  { value: 'toggle', label: '切換', desc: '按一下播放，再按停止' },
+const PLAY_MODE_OPTIONS: { value: PlayMode; label: string; icon: string; desc: string }[] = [
+  { value: 'oneshot', label: '按一下播完', icon: '▶', desc: '按一下，播完整段音效（最常用）' },
+  { value: 'hold', label: '按住才播', icon: '⏯', desc: '手指按住才播放，放開就停' },
+  { value: 'toggle', label: '開關式', icon: '🔁', desc: '按一下開始播，再按一下停止（適合 BGM）' },
 ]
 
 interface VolumeControlProps {
@@ -103,25 +103,29 @@ export default function VolumeControl({
       </div>
 
       {/* 第二行：播放模式 */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500 w-14 shrink-0">模式</span>
-        <div className="flex gap-1">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-slate-500">按下按鍵時的行為</span>
+        <div className="flex gap-1.5">
           {PLAY_MODE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => onChange({ playMode: opt.value })}
               className={[
-                'px-2.5 py-1 rounded text-xs transition-all border',
+                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-md text-xs transition-all border min-w-[80px]',
                 playMode === opt.value
                   ? 'bg-cyan-900/50 border-cyan-600 text-cyan-300'
                   : 'bg-transparent border-slate-600 text-slate-400 hover:border-slate-500',
               ].join(' ')}
               title={opt.desc}
             >
-              {opt.label}
+              <span style={{ fontSize: '14px' }}>{opt.icon}</span>
+              <span>{opt.label}</span>
             </button>
           ))}
         </div>
+        <span className="text-xs text-slate-600" style={{ fontSize: '10px' }}>
+          {PLAY_MODE_OPTIONS.find(o => o.value === playMode)?.desc}
+        </span>
       </div>
 
       {/* 第三行：淡入淡出 */}
@@ -192,9 +196,10 @@ export default function VolumeControl({
       </div>
 
       {/* 第四行：互斥群組 */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500 w-14 shrink-0">互斥群組</span>
-        <div className="flex gap-1 flex-wrap">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-slate-500">同組互斥（播 A 自動停 B，例如：開門音 vs 關門音）</span>
+        <div className="flex gap-1 flex-wrap items-center">
+          <span className="text-xs text-slate-600 mr-1">組別：</span>
           {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
             <button
               key={n}
@@ -205,7 +210,7 @@ export default function VolumeControl({
                   ? 'bg-violet-900/60 border-violet-500 text-violet-300'
                   : 'bg-transparent border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200',
               ].join(' ')}
-              title={`互斥群組 ${n}`}
+              title={`設為第 ${n} 組：同組的按鍵只能同時播一個`}
             >
               {n}
             </button>
@@ -218,11 +223,16 @@ export default function VolumeControl({
                 ? 'bg-slate-700 border-slate-400 text-slate-200'
                 : 'bg-transparent border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200',
             ].join(' ')}
-            title="不設互斥群組"
+            title="不限制，可以跟任何音效同時播放"
           >
-            無
+            不限
           </button>
         </div>
+        {exclusiveGroup !== null && (
+          <span className="text-xs" style={{ color: '#8b5cf6', fontSize: '10px' }}>
+            已設為第 {exclusiveGroup} 組 — 按下此鍵時，同組其他正在播的音效會自動停止
+          </span>
+        )}
       </div>
     </div>
   )
